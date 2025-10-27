@@ -1,4 +1,4 @@
-# Moringa Project
+# Moringa
 
 Your project description here.
 
