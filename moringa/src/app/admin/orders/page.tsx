@@ -51,13 +51,13 @@ export default function OrdersPage() {
   // Inline dropdown change; no modal needed
 
   const statusOptions = [
-    { value: 'PENDING', label: 'Pending', color: 'bg-accent/10 text-accent', icon: Clock },
-    { value: 'CONFIRMED', label: 'Confirmed', color: 'bg-primary/10 text-primary', icon: CheckCircle },
-    { value: 'PREPARING', label: 'Preparing', color: 'bg-primary/20 text-primary', icon: Package },
-    { value: 'READY', label: 'Ready', color: 'bg-primary/10 text-primary', icon: CheckCircle },
-    { value: 'OUT_FOR_DELIVERY', label: 'Out for delivery', color: 'bg-primary/10 text-primary', icon: Truck },
-    { value: 'DELIVERED', label: 'Delivered', color: 'bg-primary/10 text-primary', icon: CheckCircle },
-    { value: 'CANCELLED', label: 'Cancelled', color: 'bg-destructive/10 text-destructive', icon: XCircle },
+    { value: 'PENDING', label: 'Pending', color: 'bg-yellow-500/10 text-yellow-700', icon: Clock },
+    { value: 'CONFIRMED', label: 'Confirmed', color: 'bg-blue-500/10 text-blue-700', icon: CheckCircle },
+    { value: 'PREPARING', label: 'Preparing', color: 'bg-purple-500/10 text-purple-700', icon: Package },
+    { value: 'READY', label: 'Ready', color: 'bg-indigo-500/10 text-indigo-700', icon: CheckCircle },
+    { value: 'OUT_FOR_DELIVERY', label: 'Out for delivery', color: 'bg-cyan-500/10 text-cyan-700', icon: Truck },
+    { value: 'DELIVERED', label: 'Delivered', color: 'bg-green-500/10 text-green-700', icon: CheckCircle },
+    { value: 'CANCELLED', label: 'Cancelled', color: 'bg-red-500/10 text-red-700', icon: XCircle },
   ];
 
   useEffect(() => {
@@ -67,8 +67,8 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       const url = statusFilter === 'all' 
-        ? '/orders' 
-        : `/orders?status=${statusFilter}`;
+        ? '/orders/' 
+        : `/orders/?status=${statusFilter}`;
       const response = await api.get(url);
       const raw = response.data?.data || response.data || [];
       const list = Array.isArray(raw) ? raw : [];
@@ -135,8 +135,21 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">{getTranslation('admin', 'loading', language)}</div>
+        <div className="space-y-6">
+          <div className="animate-pulse">
+            <div className="h-10 bg-muted rounded-xl w-64 mb-2" />
+            <div className="h-4 bg-muted rounded w-48" />
+          </div>
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-4 border-b border-border last:border-0">
+                <div className="h-6 bg-muted rounded w-20 animate-pulse" />
+                <div className="h-6 bg-muted rounded flex-1 animate-pulse" />
+                <div className="h-6 bg-muted rounded w-24 animate-pulse" />
+                <div className="h-6 bg-muted rounded w-32 animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       </AdminLayout>
     );
@@ -145,15 +158,19 @@ export default function OrdersPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">{getTranslation('admin', 'ordersManagement', language)}</h1>
-          <div className="flex gap-2">
+          <div>
+            <h1 className="text-4xl font-bold text-foreground tracking-tight">{getTranslation('admin', 'ordersManagement', language)}</h1>
+            <p className="mt-2 text-muted-foreground">Manage and track all customer orders • {orders.length} total</p>
+          </div>
+          <div className="flex gap-3">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-card text-foreground"
+              className="px-4 py-3 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground shadow-sm font-medium"
             >
-              <option value="all">{getTranslation('admin', 'allOrders', language)}</option>
+              <option value="all">All Orders</option>
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -163,27 +180,27 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-lg shadow overflow-hidden">
+        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
           <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted">
+            <thead className="bg-gradient-to-r from-muted/50 to-muted/20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'orderNumberShort', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Order #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'date', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'customer', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Customer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'total', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Total
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'status', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'actions', language)}
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -197,31 +214,31 @@ export default function OrdersPage() {
               ) : (
                 orders.map((order) => (
                   <React.Fragment key={order.id}>
-                    <tr className="hover:bg-muted/50 cursor-pointer" onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}>
+                    <tr className="hover:bg-muted/30 transition-all cursor-pointer group" onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-foreground">
-                          {order.order_number?.split('-').pop() || order.order_number}
+                        <div className="text-sm font-semibold text-foreground">
+                          #{order.order_number?.split('-').pop() || order.order_number}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {utilFormatDate(new Date(order.created_at), language)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-foreground">{order.phone}</div>
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {order.delivery_address}
+                        <div className="text-sm font-medium text-foreground">{order.phone || 'N/A'}</div>
+                        <div className="text-xs text-muted-foreground truncate max-w-xs">
+                          {order.delivery_address || 'No address'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
                         {formatCurrency(order.total_amount, language)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           {getStatusBadge(order.status)}
                           <select
                             value={order.status}
                             onChange={(e) => updateStatus(order.id, e.target.value)}
-                            className="px-2 py-1 border border-border rounded-md bg-card text-foreground text-xs"
+                            className="px-3 py-1.5 border border-border rounded-xl bg-card text-foreground text-xs font-medium hover:bg-muted transition-all"
                           >
                             {statusOptions.map((opt) => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -230,49 +247,65 @@ export default function OrdersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-primary hover:text-primary/80">
+                        <button className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-all">
                           {expandedOrderId === order.id ? '▼' : '▶'}
                         </button>
                       </td>
                     </tr>
                     {expandedOrderId === order.id && order.items && order.items.length > 0 && (
                       <tr key={`${order.id}-details`}>
-                        <td colSpan={6} className="px-6 py-4 bg-muted/30">
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-sm mb-2">Order Items:</h4>
+                        <td colSpan={6} className="px-6 py-6 bg-gradient-to-r from-muted/20 to-muted/5">
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                              <Package size={16} className="text-primary" />
+                              Order Items ({order.items.length})
+                            </h4>
                             {order.items.map((item, idx) => (
-                              <div key={idx} className="border-l-2 border-primary pl-4 py-2">
-                                <div className="flex justify-between">
-                                  <span className="font-medium">{item.quantity}x {item.meal_name}</span>
-                                  <span>{formatCurrency(item.subtotal || (item.meal_price || 0) * item.quantity, language)}</span>
+                              <div key={idx} className="bg-card rounded-xl border-l-4 border-primary p-4 shadow-sm">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex items-center justify-center w-8 h-8 bg-primary/10 text-primary rounded-full font-bold text-sm">
+                                      {item.quantity}
+                                    </span>
+                                    <span className="font-semibold text-foreground">{item.meal_name}</span>
+                                  </div>
+                                  <span className="font-bold text-foreground">
+                                    {formatCurrency(item.subtotal || (item.meal_price || 0) * item.quantity, language)}
+                                  </span>
                                 </div>
                                 
                                 {/* Show base price per unit */}
                                 {typeof item.meal_price === 'number' && (
-                                  <div className="text-[10px] text-muted-foreground mt-1 ml-4">
-                                    Base: {formatCurrency(item.meal_price, language)}
+                                  <div className="text-xs text-muted-foreground mt-2 ml-11">
+                                    Base price: {formatCurrency(item.meal_price, language)} each
                                   </div>
                                 )}
 
                                 {/* Show added ingredients with prices */}
                                 {item.selected_ingredients && item.selected_ingredients.length > 0 && (
-                                  <div className="text-xs text-success mt-1 ml-4">
-                                    + Added: {item.selected_ingredients
-                                      .map((ing: any) => {
-                                        const nm = ing.name || ing.ingredient_name || ing.ingredient_id;
-                                        const pr = typeof ing.price === 'number' ? ` (${formatCurrency(ing.price, language)})` : '';
-                                        return `${nm}${pr}`;
-                                      })
-                                      .join(', ')}
+                                  <div className="text-xs mt-2 ml-11 flex items-start gap-2">
+                                    <span className="text-green-600 font-medium">+ Added:</span>
+                                    <span className="text-muted-foreground">
+                                      {item.selected_ingredients
+                                        .map((ing: any) => {
+                                          const nm = ing.name || ing.ingredient_name || ing.ingredient_id;
+                                          const pr = typeof ing.price === 'number' ? ` (+${formatCurrency(ing.price, language)})` : '';
+                                          return `${nm}${pr}`;
+                                        })
+                                        .join(', ')}
+                                    </span>
                                   </div>
                                 )}
                                 
                                 {/* Show removed ingredients */}
                                 {item.removed_ingredients && item.removed_ingredients.length > 0 && (
-                                  <div className="text-xs text-destructive mt-1">
-                                    - Removed: {(item.removed_ingredients_names && item.removed_ingredients_names.length > 0
+                                  <div className="text-xs mt-2 ml-11 flex items-start gap-2">
+                                    <span className="text-red-600 font-medium">- Removed:</span>
+                                    <span className="text-muted-foreground">
+                                      {(item.removed_ingredients_names && item.removed_ingredients_names.length > 0
                                         ? item.removed_ingredients_names
                                         : item.removed_ingredients).join(', ')}
+                                    </span>
                                   </div>
                                 )}
                               </div>

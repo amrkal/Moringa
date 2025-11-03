@@ -195,18 +195,45 @@ export default function MenuPage() {
           </div>
         </div>
         <div className="container mx-auto px-4 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
-                <div className="aspect-square bg-[hsl(var(--muted))] animate-pulse" />
-                <div className="p-4 space-y-3">
-                  <div className="h-5 w-3/4 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-                  <div className="h-4 w-full bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-                  <div className="h-4 w-2/3 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+              <div key={i} className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))]/50 overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+                <div className="aspect-square bg-gradient-to-br from-[hsl(var(--muted))] to-[hsl(var(--muted))/0.5] animate-pulse" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 w-3/4 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                  <div className="h-3 w-full bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                  <div className="h-3 w-2/3 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                  <div className="flex justify-between items-center mt-3">
+                    <div className="h-5 w-16 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                    <div className="h-8 w-20 bg-[hsl(var(--muted))] rounded-full animate-pulse" />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state when no meals available
+  if (meals.length === 0) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--background))] flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-muted to-accent/20 flex items-center justify-center">
+            <svg className="w-12 h-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold text-foreground mb-2">
+            {language === 'ar' ? 'لا توجد وجبات متاحة' : 'No Meals Available'}
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            {language === 'ar' 
+              ? 'نعمل على إضافة وجبات لذيذة. يرجى المحاولة مرة أخرى لاحقًا!'
+              : 'We\'re working on adding delicious meals. Please check back later!'}
+          </p>
         </div>
       </div>
     );
@@ -217,46 +244,51 @@ export default function MenuPage() {
       {/* Fixed below nav */}
       <div>
         {/* Category Tabs - Sticky (Mobile/Tablet) */}
-        <div className="sticky top-16 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-[hsl(var(--border))] lg:hidden">
+        <div className="sticky top-16 z-40 bg-[hsl(var(--background))]/95 backdrop-blur-xl border-b border-[hsl(var(--border))]/50 lg:hidden" style={{ boxShadow: '0 1px 0 rgba(0, 0, 0, 0.04)' }}>
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-hide snap-x">
+            <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-hide snap-x">
               <button
                 onClick={() => handleSelectCategory('all')}
-                className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
+                className={`px-5 py-2.5 rounded-2xl whitespace-nowrap font-semibold transition-all duration-300 tracking-tight ${
                   selectedCategory === 'all'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
+                    ? 'bg-primary text-primary-foreground shadow-glow-primary scale-105'
+                    : 'bg-[hsl(var(--muted))]/60 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:scale-105 active:scale-95'
                 }`}
+                style={selectedCategory === 'all' ? { boxShadow: '0 4px 12px rgba(251, 115, 22, 0.25)' } : {}}
               >
                 {getTranslation('common', 'all', language)}
-                <span className={`ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-lg font-medium ${
+                <span className={`ml-2 inline-flex items-center justify-center text-xs px-2.5 py-1 rounded-full font-medium ${
                   selectedCategory === 'all'
-                    ? 'bg-[hsl(var(--card))/0.2] text-primary-foreground'
+                    ? 'bg-primary-foreground/20 text-primary-foreground'
                     : 'bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]'
                 }`}>
                   {meals.length}
                 </span>
               </button>
-              {categories.map((category, idx) => (
-                <button
-                  key={category._id || category.id || idx}
-                  onClick={() => handleSelectCategory(((category._id || category.id || '') as string).toString())}
-                  className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
-                    selectedCategory === (category._id || category.id)
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
-                  }`}
-                >
-                  <span className="snap-center">{getLocalizedName(category)}</span>
-                  <span className={`ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-lg font-medium ${
-                    selectedCategory === (category._id || category.id)
-                      ? 'bg-[hsl(var(--card))/0.2] text-primary-foreground'
-                      : 'bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]'
-                  }`}>
-                    {counts[(category._id || category.id || '') as string] || 0}
-                  </span>
-                </button>
-              ))}
+              {categories.map((category, idx) => {
+                const isActive = selectedCategory === (category._id || category.id);
+                return (
+                  <button
+                    key={category._id || category.id || idx}
+                    onClick={() => handleSelectCategory(((category._id || category.id || '') as string).toString())}
+                    className={`px-5 py-2.5 rounded-2xl whitespace-nowrap font-semibold transition-all duration-300 tracking-tight ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-glow-primary scale-105'
+                        : 'bg-[hsl(var(--muted))]/60 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] hover:scale-105 active:scale-95'
+                    }`}
+                    style={isActive ? { boxShadow: '0 4px 12px rgba(251, 115, 22, 0.25)' } : {}}
+                  >
+                    <span className="snap-center">{getLocalizedName(category)}</span>
+                    <span className={`ml-2 inline-flex items-center justify-center text-xs px-2.5 py-1 rounded-full font-medium ${
+                      selectedCategory === (category._id || category.id)
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]'
+                    }`}>
+                      {counts[(category._id || category.id || '') as string] || 0}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -275,15 +307,16 @@ export default function MenuPage() {
                   data-section-id={cid}
                   className="mb-6"
                 >
-                  <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4 flex items-center">
+                  <h2 className="text-xl font-bold text-[hsl(var(--foreground))] mb-4 flex items-center tracking-tight">
                     {getLocalizedName(category)}
-                    <span className="ml-3 text-sm font-medium text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-3 py-1 rounded-lg">{list.length}</span>
+                    <span className="ml-3 text-xs font-semibold text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]/60 px-3 py-1.5 rounded-full">{list.length}</span>
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {list.map((meal, mIdx) => (
                       <div
                         key={meal._id || meal.id || mIdx}
-                        className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] hover:shadow-md hover:border-[hsl(var(--primary))]/30 transition-all duration-300 overflow-hidden cursor-pointer group"
+                        className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))]/50 hover:shadow-medium hover:border-[hsl(var(--primary))]/30 hover:-translate-y-2 transition-all duration-500 ease-out overflow-hidden cursor-pointer group"
+                        style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}
                         onClick={() => {
                           setActiveMeal({
                             _id: meal._id,
@@ -298,12 +331,12 @@ export default function MenuPage() {
                         }}
                       >
                         {/* Image */}
-                        <div className="relative aspect-square bg-[hsl(var(--muted))] overflow-hidden">
+                        <div className="relative aspect-square bg-gradient-to-br from-[hsl(var(--muted))] to-[hsl(var(--muted))/0.5] overflow-hidden">
                           {meal.image_url && /^https?:\/\/.+\.(png|jpe?g|webp|avif|gif|svg)(\?.*)?$/i.test(meal.image_url) ? (
                             <img
                               src={meal.image_url}
                               alt={getLocalizedName(meal)}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               loading="lazy"
                               referrerPolicy="no-referrer"
                             />
@@ -311,13 +344,13 @@ export default function MenuPage() {
                             <img
                               src={meal.image_url}
                               alt={getLocalizedName(meal)}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[hsl(var(--muted-foreground))]">
+                            <div className="w-full h-full flex items-center justify-center text-[hsl(var(--muted-foreground))] bg-gradient-to-br from-[hsl(var(--muted))] to-[hsl(var(--accent))]/10">
                               <svg
-                                className="w-16 h-16 opacity-40"
+                                className="w-12 h-12 opacity-30"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -332,27 +365,27 @@ export default function MenuPage() {
                             </div>
                           )}
                           {/* Add button overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                            <div className="bg-[hsl(var(--card))] backdrop-blur-sm rounded-full p-2.5 shadow-lg ring-2 ring-primary/20">
-                              <Plus className="w-5 h-5 text-primary" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-3">
+                            <div className="bg-primary text-primary-foreground backdrop-blur-sm rounded-full p-2 shadow-xl ring-2 ring-primary/50 transform scale-90 group-hover:scale-100 transition-transform">
+                              <Plus className="w-5 h-5" />
                             </div>
                           </div>
                         </div>
 
                         {/* Content */}
-                        <div className="p-3">
-                          <h3 className="font-semibold text-sm text-[hsl(var(--foreground))] mb-1 line-clamp-1">
+                        <div className="p-3 flex flex-col h-full">
+                          <h3 className="font-semibold text-sm text-[hsl(var(--foreground))] mb-1 line-clamp-1 group-hover:text-primary transition-colors">
                             {getLocalizedName(meal)}
                           </h3>
                           {getLocalizedDescription(meal) && (
-                            <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2 line-clamp-2 leading-relaxed">
+                            <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2.5 line-clamp-2 leading-relaxed flex-1">
                               {getLocalizedDescription(meal)}
                             </p>
                           )}
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-base font-semibold text-primary">{formatPrice(meal.price, language)}</span>
+                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-[hsl(var(--border))]/50">
+                            <span className="text-base font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                             <button
-                              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
+                              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveMeal({
@@ -367,7 +400,8 @@ export default function MenuPage() {
                                 setModalOpen(true);
                               }}
                             >
-                              {getTranslation('common', 'addToCart', language)}
+                              <Plus className="w-3.5 h-3.5" />
+                              {language === 'ar' ? 'أضف' : 'Add'}
                             </button>
                           </div>
                         </div>
@@ -386,18 +420,22 @@ export default function MenuPage() {
             <div className="space-y-2">
               <button
                 onClick={() => handleSelectCategory('all')}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-medium transition-all ${
+                className={`w-full text-left px-5 py-4 rounded-2xl font-semibold transition-all duration-300 relative overflow-hidden group tracking-tight ${
                   selectedCategory === 'all' 
-                    ? 'bg-primary text-primary-foreground shadow-sm' 
-                    : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]'
+                    ? 'bg-primary text-primary-foreground scale-[1.02]' 
+                    : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]/50 hover:border-[hsl(var(--primary))]/30 hover:scale-[1.02]'
                 }`}
+                style={selectedCategory === 'all' ? { boxShadow: '0 4px 12px rgba(251, 115, 22, 0.25)' } : { boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)' }}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{getTranslation('common', 'all', language)}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                {selectedCategory === 'all' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary-foreground/10 to-primary/0 animate-shimmer" />
+                )}
+                <div className="flex items-center justify-between relative">
+                  <span className="font-bold">{getTranslation('common', 'all', language)}</span>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold transition-all ${
                     selectedCategory === 'all' 
-                      ? 'bg-[hsl(var(--card))/0.3] text-[hsl(var(--foreground))/0.9]' 
-                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+                      ? 'bg-primary-foreground/20 text-primary-foreground' 
+                      : 'bg-[hsl(var(--muted))]/80 text-[hsl(var(--muted-foreground))] group-hover:bg-[hsl(var(--muted))]'
                   }`}>{meals.length}</span>
                 </div>
               </button>
@@ -411,18 +449,22 @@ export default function MenuPage() {
                   <button
                     key={cid || idx}
                     onClick={() => handleSelectCategory(cid)}
-                    className={`w-full text-left px-4 py-3 rounded-lg border transition ${
+                    className={`w-full text-left px-5 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden group tracking-tight ${
                       active 
-                        ? 'bg-primary text-primary-foreground border-primary' 
-                        : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))] text-[hsl(var(--foreground))]'
+                        ? 'bg-primary text-primary-foreground scale-[1.02]' 
+                        : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]/50 hover:border-[hsl(var(--primary))]/30 hover:scale-[1.02] text-[hsl(var(--foreground))]'
                     }`}
+                    style={active ? { boxShadow: '0 4px 12px rgba(251, 115, 22, 0.25)' } : { boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)' }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium line-clamp-1">{getLocalizedName(category)}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    {active && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary-foreground/10 to-primary/0 animate-shimmer" />
+                    )}
+                    <div className="flex items-center justify-between relative">
+                      <span className={`line-clamp-1 ${active ? 'font-bold' : 'font-semibold'}`}>{getLocalizedName(category)}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-bold transition-all ${
                         active 
-                          ? 'bg-[hsl(var(--card))/0.3] text-[hsl(var(--foreground))/0.9]' 
-                          : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+                          ? 'bg-primary-foreground/20 text-primary-foreground' 
+                          : 'bg-[hsl(var(--muted))]/80 text-[hsl(var(--muted-foreground))] group-hover:bg-[hsl(var(--muted))]'
                       }`}>{count}</span>
                     </div>
                   </button>
@@ -445,15 +487,16 @@ export default function MenuPage() {
                     data-section-id={cid}
                     className="mb-10"
                   >
-                    <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center">
+                    <h2 className="text-2xl font-bold text-foreground mb-5 flex items-center tracking-tight">
                       {getLocalizedName(category)}
-                      <span className="ml-3 text-sm font-medium text-muted-foreground">{list.length}</span>
+                      <span className="ml-3 text-xs font-semibold text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full">{list.length}</span>
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                       {list.map((meal, mIdx) => (
                         <div
                           key={meal._id || meal.id || mIdx}
-                          className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer group border border-border"
+                          className="bg-card rounded-2xl hover:shadow-large hover:border-primary/30 hover:-translate-y-2 transition-all duration-500 ease-out overflow-hidden cursor-pointer group border border-border/50"
+                          style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}
                           onClick={() => {
                             setActiveMeal({
                               _id: meal._id,
@@ -468,7 +511,7 @@ export default function MenuPage() {
                           }}
                         >
                           {/* Image */}
-                          <div className="relative aspect-square bg-muted overflow-hidden">
+                          <div className="relative aspect-square bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
                             {meal.image_url && /^https?:\/\/.+\.(png|jpe?g|webp|avif|gif|svg)(\?.*)?$/i.test(meal.image_url) ? (
                               <img
                                 src={meal.image_url}
@@ -485,9 +528,9 @@ export default function MenuPage() {
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-accent/10">
                                 <svg
-                                  className="w-20 h-20"
+                                  className="w-16 h-16 opacity-40"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -502,29 +545,27 @@ export default function MenuPage() {
                               </div>
                             )}
                             {/* Add button overlay */}
-                            <div className="absolute inset-0 bg-[hsl(var(--foreground))/0] group-hover:bg-[hsl(var(--foreground))/0.2] transition-all duration-300 flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="bg-card rounded-full p-3 shadow-lg">
-                                  <Plus className="w-6 h-6 text-primary" />
-                                </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-4">
+                              <div className="bg-primary text-primary-foreground backdrop-blur-sm rounded-full p-3 shadow-xl ring-2 ring-primary/50 transform scale-90 group-hover:scale-100 transition-transform">
+                                <Plus className="w-6 h-6" />
                               </div>
                             </div>
                           </div>
 
                           {/* Content */}
-                          <div className="p-4">
-                            <h3 className="font-bold text-lg text-foreground mb-1 line-clamp-1">
+                          <div className="p-5 flex flex-col">
+                            <h3 className="font-bold text-lg text-foreground mb-1.5 line-clamp-1 group-hover:text-primary transition-colors">
                               {getLocalizedName(meal)}
                             </h3>
                             {getLocalizedDescription(meal) && (
-                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed flex-1">
                                 {getLocalizedDescription(meal)}
                               </p>
                             )}
-                            <div className="flex items-center justify-between">
-                              <span className="text-xl font-bold text-primary">{formatPrice(meal.price, language)}</span>
+                            <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
+                              <span className="text-xl font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                               <button
-                                className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+                                className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/90 hover:shadow-md active:scale-95 transition-all flex items-center gap-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setActiveMeal({
@@ -539,7 +580,8 @@ export default function MenuPage() {
                                   setModalOpen(true);
                                 }}
                               >
-                                {getTranslation('common', 'addToCart', language)}
+                                <Plus className="w-4 h-4" />
+                                {language === 'ar' ? 'أضف' : 'Add'}
                               </button>
                             </div>
                           </div>

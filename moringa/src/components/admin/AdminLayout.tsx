@@ -23,6 +23,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { Palette } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
+import { NotificationListener } from '@/components/admin/NotificationListener';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -64,7 +66,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
   };
 
   const navigation = [
-    { name: getTranslation('admin', 'dashboard', language), href: '/admin', icon: LayoutDashboard },
+    { name: getTranslation('admin', 'dashboard', language), href: '/admin/dashboard', icon: LayoutDashboard },
     { name: getTranslation('admin', 'categories', language), href: '/admin/categories', icon: Package },
     { name: getTranslation('admin', 'meals', language), href: '/admin/meals', icon: ShoppingBag },
     { name: getTranslation('admin', 'ingredients', language), href: '/admin/ingredients', icon: Package },
@@ -83,117 +85,56 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))]" dir="ltr">
-      {/* Mobile sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-[hsl(var(--foreground))/0.5]" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-[hsl(var(--card))] shadow-xl border-r border-[hsl(var(--border))]" dir="ltr">
-            <div className="flex h-16 items-center justify-between px-6 border-b border-[hsl(var(--border))]">
-              <Link href="/admin" className="flex items-center gap-3" aria-label="Moringa Admin Home" onClick={() => setSidebarOpen(false)}>
-                <img src="/logo.jpg" alt="Moringa" className="h-8 w-auto rounded-sm" />
-                <span className="sr-only">{getTranslation('admin', 'adminPanel', language)}</span>
-              </Link>
-              <button onClick={() => setSidebarOpen(false)} className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]" aria-label="Close sidebar">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <nav id="admin-sidebar" className="flex-1 px-4 py-6 space-y-2" role="navigation" aria-label="Admin sidebar">
-              {navigation.map((item) => {
-                const isActive = pathname?.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-[hsl(var(--muted))] ${
-                      isActive ? 'text-primary bg-primary-soft' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary' : 'text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]'}`} />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-64 lg:flex-col" dir="ltr">
-        <div className="flex flex-col min-h-0 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))]">
-          <div className="flex h-16 items-center px-6 border-b border-[hsl(var(--border))]">
-            <Link href="/admin" className="flex items-center gap-3" aria-label="Moringa Admin Home">
-              <img src="/logo.jpg" alt="Moringa" className="h-8 w-auto rounded-sm" />
-              <span className="sr-only">{getTranslation('admin', 'adminPanel', language)}</span>
-            </Link>
-          </div>
-          <nav id="admin-sidebar" className="flex-1 px-4 py-6 space-y-2" role="navigation" aria-label="Admin sidebar">
-            {navigation.map((item) => {
-              const isActive = pathname?.startsWith(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-[hsl(var(--muted))] ${
-                    isActive ? 'text-primary bg-primary-soft' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
-                  }`}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary' : 'text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]'}`} />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="flex-shrink-0 border-t border-[hsl(var(--border))] p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-sm font-medium text-[hsl(var(--foreground))]">
-                    {user?.name?.charAt(0)?.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-[hsl(var(--foreground))]">{user?.name}</p>
-                <button
-                  onClick={handleLogout}
-                  className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] flex items-center"
-                >
-                  <LogOut className="h-3 w-3 mr-1" />
-                  {getTranslation('admin', 'signOut', language)}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Notification Listener - only active on admin pages */}
+      <NotificationListener />
+      
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))]">
+        <div className="sticky top-0 z-10 bg-[hsl(var(--card))]/80 backdrop-blur-md border-b border-[hsl(var(--border))] shadow-sm">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center">
+            <div className="flex items-center gap-8">
+              {/* Mobile Menu Button */}
               <button
-                className="lg:hidden -ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[hsl(var(--ring))]"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="Open sidebar"
-                aria-expanded={sidebarOpen}
-                aria-controls="admin-sidebar"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-all"
+                aria-label="Toggle navigation"
               >
-                <Menu className="h-6 w-6" />
+                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-              <h1 className="ml-4 lg:ml-0 text-2xl font-semibold text-[hsl(var(--foreground))]">{title}</h1>
+              
+              <Link href="/admin" className="flex items-center gap-3" aria-label="Moringa Admin Home">
+                <img src="/logo.jpg" alt="Moringa" className="h-8 w-auto rounded-sm" />
+              </Link>
+              
+              {/* Navigation Links - Desktop */}
+              <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Admin navigation">
+                {navigation.map((item) => {
+                  const isActive = pathname?.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                        isActive 
+                          ? 'text-primary bg-primary/10' 
+                          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-2">
               {/* Dark/Light toggle */}
               <button
                 onClick={() => setColorMode(isDarkMode ? 'light' : 'dark')}
-                className="p-2.5 hover:bg-[hsl(var(--muted))] rounded-xl transition-all"
+                className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-all"
                 aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 title={isDarkMode ? 'Light mode' : 'Dark mode'}
               >
@@ -204,7 +145,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
               <div className="relative">
                 <button
                   onClick={() => setShowThemeMenu(!showThemeMenu)}
-                  className="p-2.5 hover:bg-[hsl(var(--muted))] rounded-xl transition-all"
+                  className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-all"
                   aria-label="Change color theme"
                   title="Color Theme"
                 >
@@ -240,26 +181,67 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                   </>
                 )}
               </div>
+              
               <LanguageSwitcher />
-              <button className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]">
-                <Bell className="h-5 w-5" />
-              </button>
-              <div className="flex items-center">
+              
+              <NotificationBell />
+              
+              <div className="flex items-center gap-2 pl-2 ml-2 border-l border-[hsl(var(--border))]">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-sm font-medium text-[hsl(var(--foreground))]">
+                  <span className="text-sm font-medium text-primary-foreground">
                     {user?.name?.charAt(0)?.toUpperCase()}
                   </span>
                 </div>
-                <span className="ml-2 text-sm font-medium text-[hsl(var(--foreground))] hidden sm:block">
-                  {user?.name}
-                </span>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium text-[hsl(var(--foreground))]">{user?.name}</p>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] flex items-center"
+                  >
+                    <LogOut className="h-3 w-3 mr-1" />
+                    {getTranslation('admin', 'signOut', language)}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Mobile Navigation Overlay */}
+        {sidebarOpen && (
+          <>
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <div className="fixed top-16 left-0 right-0 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-lg z-50 md:hidden">
+              <nav className="p-4 space-y-1" role="navigation" aria-label="Mobile navigation">
+                {navigation.map((item) => {
+                  const isActive = pathname?.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                        isActive 
+                          ? 'text-primary bg-primary/10' 
+                          : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </>
+        )}
+
         {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 text-[hsl(var(--foreground))]">
+        <main className="flex-1 px-6 pb-6 pt-4 text-[hsl(var(--foreground))]">
           {children}
         </main>
       </div>

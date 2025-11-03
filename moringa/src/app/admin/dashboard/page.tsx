@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
+import Link from 'next/link';
 import { 
   Users, 
   ShoppingBag, 
@@ -9,7 +10,14 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
-  Eye
+  Eye,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  Star,
+  Award,
+  Activity
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,6 +33,10 @@ interface DashboardStats {
   recentOrders: any[];
   popularMeals: any[];
   monthlyRevenue: number[];
+  todayOrders: number;
+  todayRevenue: number;
+  avgOrderValue: number;
+  pendingOrders: number;
 }
 
 export default function AdminDashboard() {
@@ -36,7 +48,11 @@ export default function AdminDashboard() {
     totalMeals: 0,
     recentOrders: [],
     popularMeals: [],
-    monthlyRevenue: []
+    monthlyRevenue: [],
+    todayOrders: 0,
+    todayRevenue: 0,
+    avgOrderValue: 0,
+    pendingOrders: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -55,9 +71,11 @@ export default function AdminDashboard() {
         api.get('/meals?active_only=false')
       ]);
 
-      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || ordersRes.data || [];
-      const users = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.items || usersRes.data || [];
-      const meals = Array.isArray(mealsRes.data) ? mealsRes.data : mealsRes.data.items || mealsRes.data || [];
+      console.log('Dashboard API Responses:', { ordersRes: ordersRes.data, usersRes: usersRes.data, mealsRes: mealsRes.data });
+
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data?.items || ordersRes.data?.data || [];
+      const users = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data?.items || usersRes.data?.data || [];
+      const meals = Array.isArray(mealsRes.data) ? mealsRes.data : mealsRes.data?.items || mealsRes.data?.data || [];
 
       // Calculate stats
       const totalRevenue = orders.reduce((sum: number, order: any) => {
@@ -82,16 +100,24 @@ export default function AdminDashboard() {
           
           if (!mealCounts[mealId]) {
             const meal = meals.find((m: any) => (m.id || m._id) === mealId);
-            mealCounts[mealId] = { meal: meal || { name: 'Unknown', price: 0 }, count: 0, revenue: 0 };
+            mealCounts[mealId] = { meal: meal || { name: item.meal_name || 'Unknown', price: item.meal_price || 0 }, count: 0, revenue: 0 };
           }
           mealCounts[mealId].count += item.quantity || 1;
-          mealCounts[mealId].revenue += (item.price || 0) * (item.quantity || 1);
+          // Use subtotal if available, otherwise calculate from meal_price and quantity
+          const itemRevenue = item.subtotal ?? ((item.meal_price || item.price || 0) * (item.quantity || 1));
+          mealCounts[mealId].revenue += itemRevenue;
         });
       });
       
       const popularMeals = Object.values(mealCounts)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
+        .sort((a, b) => {
+          // Sort by order count (popularity) first, then by revenue
+          if (b.count !== a.count) {
+            return b.count - a.count;
+          }
+          return b.revenue - a.revenue;
+        })
+        .slice(0, 10) // Show top 10 instead of 5
         .map(({ meal, count, revenue }) => ({
           ...meal,
           orderCount: count,
@@ -111,6 +137,25 @@ export default function AdminDashboard() {
         }
       });
 
+      // Calculate today's stats
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayOrders = orders.filter((order: any) => {
+        const orderDate = new Date(order.created_at || order.createdAt);
+        return orderDate >= today;
+      });
+      const todayRevenue = todayOrders.reduce((sum: number, order: any) => {
+        return sum + (order.total_amount || order.total || 0);
+      }, 0);
+
+      // Calculate average order value
+      const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+      // Count pending orders
+      const pendingOrders = orders.filter((order: any) => 
+        order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARING'
+      ).length;
+
       setStats({
         totalOrders: orders.length,
         totalRevenue,
@@ -118,7 +163,11 @@ export default function AdminDashboard() {
         totalMeals: meals.length,
         recentOrders,
         popularMeals,
-        monthlyRevenue
+        monthlyRevenue,
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        avgOrderValue,
+        pendingOrders
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -130,8 +179,38 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="space-y-5">
+          {/* Loading Stat Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-2xl border border-border shadow-sm p-6 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 bg-muted/50 rounded-xl"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-muted/50 rounded w-20"></div>
+                    <div className="h-6 bg-muted/50 rounded w-16"></div>
+                  </div>
+                </div>
+                <div className="mt-4 h-3 bg-muted/50 rounded w-24"></div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Loading Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-muted/50 rounded w-32 mb-4"></div>
+              <div className="h-64 bg-muted/30 rounded-xl"></div>
+            </div>
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-muted/50 rounded w-32 mb-4"></div>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-16 bg-muted/30 rounded-xl"></div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </AdminLayout>
     );
@@ -144,7 +223,8 @@ export default function AdminDashboard() {
       icon: ShoppingBag,
       change: '+12%',
       changeType: 'positive' as const,
-      color: 'bg-info'
+      color: 'bg-info',
+      href: '/admin/orders'
     },
     {
       title: getTranslation('admin', 'revenue', language),
@@ -152,7 +232,8 @@ export default function AdminDashboard() {
       icon: DollarSign,
       change: '+18%',
       changeType: 'positive' as const,
-      color: 'bg-success'
+      color: 'bg-success',
+      href: '/admin/orders'
     },
     {
       title: getTranslation('admin', 'totalUsers', language),
@@ -160,7 +241,8 @@ export default function AdminDashboard() {
       icon: Users,
       change: '+8%',
       changeType: 'positive' as const,
-      color: 'bg-primary'
+      color: 'bg-primary',
+      href: '/admin/users'
     },
     {
       title: getTranslation('admin', 'totalMeals', language),
@@ -168,150 +250,283 @@ export default function AdminDashboard() {
       icon: Package,
       change: '+3%',
       changeType: 'positive' as const,
-      color: 'bg-primary'
+      color: 'bg-primary',
+      href: '/admin/meals'
     }
   ];
 
   return (
     <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
-      <div className="space-y-6" dir="ltr">
+      <div className="space-y-5" dir="ltr">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, index) => (
-            <div key={index} className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <div className={`${stat.color} p-2 rounded-lg`}>
-                  <stat.icon className="h-6 w-6 text-primary-foreground" />
+            <Link 
+              key={index}
+              href={stat.href}
+              className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-all duration-200 p-6 group cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${stat.color} p-3 rounded-xl group-hover:scale-110 transition-transform duration-200`}>
+                  <stat.icon className="h-6 w-6 text-primary-foreground" strokeWidth={2} />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{stat.title}</p>
-                  <p className="text-2xl font-semibold text-[hsl(var(--foreground))]">{stat.value}</p>
+                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <TrendingUp className="h-4 w-4" strokeWidth={2.5} />
+                  <span className="text-sm font-semibold">
+                    {stat.change}
+                  </span>
                 </div>
               </div>
-              <div className="mt-4 flex items-center">
-                <TrendingUp className="h-4 w-4 text-success" />
-                <span className="ml-1 text-sm text-success font-medium">
-                  {stat.change}
-                </span>
-                <span className="ml-1 text-sm text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'fromLastMonth', language)}</span>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1 tracking-tight">{stat.title}</p>
+                <p className="text-3xl font-bold text-foreground tracking-tight">{stat.value}</p>
               </div>
-            </div>
+              <div className="mt-3 pt-3 border-t border-border">
+                <span className="text-xs text-muted-foreground">{getTranslation('admin', 'fromLastMonth', language)}</span>
+              </div>
+            </Link>
           ))}
         </div>
 
+        {/* Today's Performance */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Today's Orders</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{stats.todayOrders}</p>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+              </div>
+              <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Today's Revenue</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{formatCurrency(stats.todayRevenue, language, 'ILS')}</p>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" strokeWidth={2} />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Avg Order Value</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{formatCurrency(stats.avgOrderValue, language, 'ILS')}</p>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+              </div>
+              {stats.pendingOrders > 0 && (
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 font-medium">Pending Orders</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{stats.pendingOrders}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Charts and Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Revenue Chart */}
-          <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">{getTranslation('admin', 'monthlyRevenue', language)}</h3>
-            <div className="h-64 flex items-end justify-between space-x-2">
-              {stats.monthlyRevenue.map((revenue, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  <div
-                    className="w-6 bg-primary rounded-t"
-                    style={{
-                      height: `${(revenue / Math.max(...stats.monthlyRevenue)) * 200}px`
-                    }}
-                  />
-                  <span className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index]}
-                  </span>
-                </div>
-              ))}
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'monthlyRevenue', language)}</h3>
+              <span className="text-sm text-muted-foreground">Last 12 months</span>
+            </div>
+            <div className="h-64 flex items-end justify-between gap-2 px-2">
+              {stats.monthlyRevenue.map((revenue, index) => {
+                const maxRevenue = Math.max(...stats.monthlyRevenue, 1);
+                const heightPercent = (revenue / maxRevenue) * 100;
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center group">
+                    <div className="w-full relative">
+                      {/* Hover tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="bg-foreground text-background px-2 py-1 rounded text-xs whitespace-nowrap">
+                          {formatCurrency(revenue, language, 'ILS')}
+                        </div>
+                      </div>
+                      <div
+                        className="w-full bg-gradient-to-t from-primary to-primary/70 rounded-t-lg transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 min-h-[4px]"
+                        style={{
+                          height: `${Math.max(heightPercent, 2)}%`
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground mt-2 font-medium">
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index]}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Recent Orders */}
-          <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">{getTranslation('admin', 'recentOrders', language)}</h3>
-              <button className="text-primary hover:opacity-90 text-sm font-medium is-link">
-                {getTranslation('admin', 'viewAll', language)}
-              </button>
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'recentOrders', language)}</h3>
+              <Link 
+                href="/admin/orders"
+                className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+              >
+                {getTranslation('admin', 'viewAll', language)} →
+              </Link>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-1">
               {stats.recentOrders.length > 0 ? (
-                stats.recentOrders.map((order, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b border-[hsl(var(--border))]">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center">
-                        <span className="text-xs font-medium">
-                          #{order.id?.toString().slice(-4) || `000${index}`}
-                        </span>
+                stats.recentOrders.map((order, index) => {
+                  const orderId = order._id || order.id || '';
+                  const orderNumber = orderId.toString().slice(-8).toUpperCase();
+                  const customerName = order.customer_name || order.customerName || order.user?.name || getTranslation('admin', 'guestUser', language);
+                  const orderDate = new Date(order.created_at || order.createdAt || Date.now());
+                  const itemCount = (order.items || []).reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+                  
+                  // Status badge styling
+                  const getStatusStyle = (status: string) => {
+                    const styles = {
+                      DELIVERED: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-900',
+                      COMPLETED: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-900',
+                      OUT_FOR_DELIVERY: 'bg-cyan-50 dark:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-900',
+                      READY: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900',
+                      PREPARING: 'bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900',
+                      CONFIRMED: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900',
+                      PENDING: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900',
+                      CANCELLED: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900',
+                    };
+                    return styles[status as keyof typeof styles] || styles.PENDING;
+                  };
+                  
+                  return (
+                    <Link
+                      key={orderId || index}
+                      href={`/admin/orders`}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                          <ShoppingBag className="h-5 w-5 text-primary" strokeWidth={2} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-sm font-semibold text-foreground tracking-tight">
+                              #{orderNumber}
+                            </p>
+                            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full border ${getStatusStyle(order.status || 'PENDING')}`}>
+                              {order.status || 'PENDING'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {customerName} • {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {orderDate.toLocaleDateString(language === 'ar' ? 'ar-EG' : language === 'he' ? 'he-IL' : 'en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-                          Order #{order.id?.toString().slice(-6) || `00000${index}`}
-                        </p>
-                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                          {order.customer_name || getTranslation('admin', 'guestUser', language)}
+                      <div className="text-right shrink-0 ml-4">
+                        <p className="text-sm font-bold text-foreground tracking-tight">
+                          {formatCurrency(order.total_amount || order.total || 0, language, 'ILS')}
                         </p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-                        {formatCurrency(order.total_amount || order.total || 0, language, 'ILS')}
-                      </p>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        order.status === 'COMPLETED' ? 'bg-success-soft text-success' :
-                        order.status === 'PREPARING' ? 'bg-info-soft text-info' :
-                        order.status === 'CANCELLED' ? 'bg-destructive-soft text-destructive' :
-                        'bg-warning-soft text-warning'
-                      }`}>
-                        {order.status || 'PENDING'}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                    </Link>
+                  );
+                })
               ) : (
-                <p className="text-[hsl(var(--muted-foreground))] text-center py-4">{getTranslation('admin', 'noRecentOrders', language)}</p>
+                <div className="text-center py-8">
+                  <ShoppingBag className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" strokeWidth={1.5} />
+                  <p className="text-muted-foreground text-sm">{getTranslation('admin', 'noRecentOrders', language)}</p>
+                </div>
               )}
             </div>
           </div>
         </div>
 
         {/* Popular Meals */}
-        <div className="bg-[hsl(var(--card))] rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-[hsl(var(--border))]">
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-border bg-muted/30">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">{getTranslation('admin', 'popularMeals', language)}</h3>
-              <button className="text-primary hover:opacity-90 text-sm font-medium is-link">
-                {getTranslation('admin', 'viewAll', language)}
-              </button>
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'popularMeals', language)}</h3>
+              <Link 
+                href="/admin/meals"
+                className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+              >
+                {getTranslation('admin', 'viewAll', language)} →
+              </Link>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted">
+            <table className="min-w-full">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {getTranslation('admin', 'mealColumn', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {getTranslation('admin', 'categoryColumn', language)}
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Orders
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Revenue
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {getTranslation('admin', 'priceColumn', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {getTranslation('admin', 'status', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     {getTranslation('admin', 'actions', language)}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-card divide-y divide-border">
+              <tbody className="bg-card">
                 {stats.popularMeals.length > 0 ? (
-                  stats.popularMeals.map((meal, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
-                            <Package className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+                  stats.popularMeals.map((meal, index) => {
+                    // Medal colors for top 3
+                    const getMedalColor = (rank: number) => {
+                      if (rank === 0) return 'bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-800';
+                      if (rank === 1) return 'bg-slate-100 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800';
+                      if (rank === 2) return 'bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-800';
+                      return 'bg-muted/50 text-muted-foreground border-border';
+                    };
+
+                    return (
+                      <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center group-hover:scale-105 transition-all shrink-0 border-2 ${getMedalColor(index)}`}>
+                              {index < 3 ? (
+                                <Award className="h-5 w-5" strokeWidth={2.5} />
+                              ) : (
+                                <span className="text-sm font-bold">#{index + 1}</span>
+                              )}
+                            </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-foreground tracking-tight truncate">
                               {typeof meal.name === 'string' 
                                 ? meal.name 
                                 : getLocalizedText(
@@ -320,7 +535,7 @@ export default function AdminDashboard() {
                                   )
                               }
                             </div>
-                            <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                            <div className="text-xs text-muted-foreground truncate max-w-md">
                               {(() => {
                                 const desc = typeof meal.description === 'string'
                                   ? meal.description
@@ -328,36 +543,55 @@ export default function AdminDashboard() {
                                       { en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' },
                                       language
                                     );
-                                return desc ? `${desc.slice(0, 50)}...` : '';
+                                return desc ? `${desc.slice(0, 60)}...` : '';
                               })()}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
-                        {meal.category || getTranslation('admin', 'uncategorized', language)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
-                        {formatCurrency(meal.price || 0, language, 'ILS')}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-bold text-primary">{meal.orderCount || 0}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">orders</span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          meal.available ? 'bg-success-soft text-success' : 'bg-destructive-soft text-destructive'
+                        <div className="text-sm font-semibold text-foreground">
+                          {formatCurrency(meal.totalRevenue || 0, language, 'ILS')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-muted-foreground">
+                          {formatCurrency(meal.price || 0, language, 'ILS')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                          meal.available 
+                            ? 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200 dark:border-green-900' 
+                            : 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900'
                         }`}>
                           {meal.available ? getTranslation('admin', 'available', language) : getTranslation('admin', 'unavailable', language)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-primary hover:opacity-90 is-link">
-                          <Eye className="h-4 w-4" />
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <Link 
+                          href="/admin/meals"
+                          className="text-primary hover:text-primary/80 transition-colors p-2 hover:bg-primary/5 rounded-lg inline-flex"
+                        >
+                          <Eye className="h-4 w-4" strokeWidth={2} />
+                        </Link>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-[hsl(var(--muted-foreground))]">
-                      {getTranslation('admin', 'noMealsFound', language)}
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <Package className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" strokeWidth={1.5} />
+                      <p className="text-muted-foreground text-sm">{getTranslation('admin', 'noMealsFound', language)}</p>
                     </td>
                   </tr>
                 )}
@@ -366,26 +600,61 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">{getTranslation('admin', 'quickActions', language)}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
-              <Package className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
-              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardAddMeal', language)}</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
-              <Users className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
-              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardManageUsers', language)}</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
-              <ShoppingBag className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
-              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardViewOrders', language)}</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
-              <Clock className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
-              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'settings', language)}</span>
-            </button>
+        {/* Quick Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-900 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-blue-700 dark:text-blue-400 font-medium mb-1">Top Performing Meal</p>
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-300 tracking-tight">
+                  {stats.popularMeals.length > 0 ? (
+                    typeof stats.popularMeals[0].name === 'string' 
+                      ? stats.popularMeals[0].name 
+                      : getLocalizedText(
+                          { en: stats.popularMeals[0].name?.en ?? '', ar: stats.popularMeals[0].name?.ar ?? '', he: stats.popularMeals[0].name?.he ?? '' },
+                          language
+                        )
+                  ) : 'N/A'}
+                </p>
+              </div>
+              <Award className="h-10 w-10 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
+              <Star className="h-4 w-4 fill-current" />
+              <span>{stats.popularMeals[0]?.orderCount || 0} orders</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-900 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium mb-1">Highest Revenue Meal</p>
+                <p className="text-xl font-bold text-emerald-900 dark:text-emerald-300 tracking-tight">
+                  {stats.popularMeals.length > 0 ? formatCurrency(stats.popularMeals[0]?.totalRevenue || 0, language, 'ILS') : 'N/A'}
+                </p>
+              </div>
+              <TrendingUp className="h-10 w-10 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+              <DollarSign className="h-4 w-4" />
+              <span>from {stats.popularMeals[0]?.orderCount || 0} orders</span>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-2xl border border-purple-200 dark:border-purple-900 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-purple-700 dark:text-purple-400 font-medium mb-1">Total Menu Items</p>
+                <p className="text-xl font-bold text-purple-900 dark:text-purple-300 tracking-tight">
+                  {stats.totalMeals}
+                </p>
+              </div>
+              <Package className="h-10 w-10 text-purple-600 dark:text-purple-400" strokeWidth={1.5} />
+            </div>
+            <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400">
+              <Activity className="h-4 w-4" />
+              <span>{stats.popularMeals.filter(m => m.available).length} available</span>
+            </div>
           </div>
         </div>
       </div>

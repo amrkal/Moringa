@@ -1,38 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  /* Modern food delivery palette - appetizing, trustworthy, energetic */
-  /* Inspired by Uber Eats, DoorDash, and premium food brands */
+  /* Premium Figma-inspired palette - clean, sophisticated, modern */
   
-  --background: 0 0% 98%;           /* Soft off-white - clean, inviting */
-  --foreground: 240 10% 15%;        /* Rich charcoal - professional, readable */
-  --card: 0 0% 100%;                /* Pure white cards - clean, minimal */
-  --card-foreground: 240 10% 15%;
+  --background: 0 0% 99%;           /* Almost white - ultra clean */
+  --foreground: 222 47% 11%;        /* Deep navy - premium readability */
+  --card: 0 0% 100%;                /* Pure white cards - pristine */
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 15%;
+  --popover-foreground: 222 47% 11%;
   
-  /* Primary: Vibrant orange-red - appetite stimulating, energetic, bold */
-  --primary: 14 90% 53%;            /* Bright coral-orange #f97316 - food industry standard */
+  /* Primary: Vibrant orange - appetite stimulating, energetic */
+  --primary: 14 90% 53%;            /* Bright coral-orange #f97316 */
   --primary-foreground: 0 0% 100%;
   
-  /* Secondary: Warm peach - friendly, approachable */
-  --secondary: 24 100% 97%;         /* Very light peach */
-  --secondary-foreground: 240 10% 15%;
-  --muted: 210 20% 96%;             /* Cool light gray */
-  --muted-foreground: 215 16% 47%;  /* Medium slate gray */
+  /* Secondary: Ultra subtle - Figma-style neutrals */
+  --secondary: 210 20% 98%;         /* Nearly white gray */
+  --secondary-foreground: 222 47% 11%;
+  --muted: 220 14% 96%;             /* Subtle cool gray */
+  --muted-foreground: 220 9% 46%;   /* Medium gray - Figma text */
   
-  /* Accent: Golden amber - premium, appetizing, warm */
-  --accent: 43 96% 56%;             /* Rich golden #fbbf24 */
-  --accent-foreground: 240 10% 15%;
+  /* Accent: Premium gold - refined, appetizing */
+  --accent: 45 93% 58%;             /* Refined golden */
+  --accent-foreground: 222 47% 11%;
   
-  --destructive: 0 84% 60%;         /* Vibrant red for errors */
+  --destructive: 0 84% 60%;         /* Vibrant red */
   --destructive-foreground: 0 0% 100%;
   
-  /* Borders - soft and modern */
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
+  /* Borders - ultra subtle Figma-style */
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
   --ring: 14 90% 53%;
-  --radius: 0.75rem;
+  --radius: 1rem;                   /* Increased for premium feel */
   
   /* Additional semantic colors */
   --success: 142 76% 45%;           /* Fresh green for success */
@@ -40,29 +39,29 @@
   --info: 211 96% 48%;              /* Bright blue for info */
 }
 
-/* Dark mode - sophisticated, modern, maintains appetite appeal */
+/* Dark mode - premium Figma-style dark theme */
 .dark {
-  --background: 222 47% 11%;        /* Deep navy-charcoal - premium feel */
-  --foreground: 210 20% 98%;        /* Soft white - easy on eyes */
-  --card: 222 47% 14%;              /* Slightly lighter than bg */
+  --background: 222 47% 8%;         /* Deeper dark - more premium */
+  --foreground: 210 20% 98%;        /* Crisp white text */
+  --card: 222 47% 11%;              /* Elevated surface */
   --card-foreground: 210 20% 98%;
   --popover: 222 47% 11%;
   --popover-foreground: 210 20% 98%;
   
-  /* Primary: Bright coral - pops in dark mode, maintains energy */
-  --primary: 14 90% 58%;            /* Slightly brighter for dark bg */
+  /* Primary: Vibrant orange - pops beautifully in dark */
+  --primary: 14 90% 58%;
   --primary-foreground: 0 0% 100%;
   
-  --secondary: 222 47% 18%;         /* Dark slate */
+  --secondary: 222 47% 15%;         /* Subtle elevation */
   --secondary-foreground: 210 20% 98%;
-  --muted: 217 33% 17%;
+  --muted: 217 33% 16%;             /* Figma-style muted surface */
   --muted-foreground: 215 20% 65%;
-  --accent: 43 96% 65%;             /* Bright amber in dark */
-  --accent-foreground: 222 47% 11%;
+  --accent: 45 93% 60%;             /* Bright refined gold */
+  --accent-foreground: 222 47% 8%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 217 33% 22%;
-  --input: 217 33% 22%;
+  --border: 217 33% 18%;            /* Subtle borders */
+  --input: 217 33% 18%;
   --ring: 14 90% 58%;
 }
 
@@ -176,6 +175,49 @@ body {
   font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em; /* Figma-style tighter tracking */
+}
+
+/* Premium Figma-style card elevation */
+.card-premium {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-premium:hover {
+  border-color: hsl(var(--border));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: hsl(var(--card) / 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+/* Premium button styles */
+button, .btn {
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active:not(:disabled), .btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Premium input styles */
+input, textarea, select {
+  transition: all 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
 }
 
 /* ===== Utility shortcuts for CSS variable-driven colors ===== */

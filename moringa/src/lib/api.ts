@@ -233,7 +233,7 @@ export const ordersApi = {
     status?: string;
     user_id?: string;
   }) =>
-    api.get('/orders', { params }),
+    api.get('/orders/', { params }),
   
   getById: (id: string) =>
     api.get(`/orders/${id}`),
@@ -260,7 +260,7 @@ export const ordersApi = {
       special_instructions?: string;
     }>;
   }) =>
-    api.post('/orders', orderData),
+  api.post('/orders/', orderData),
   
   update: (id: string, orderData: Partial<{
     status: string;

@@ -205,108 +205,142 @@ export default function IngredientsPage() {
           </button>
         </div>
 
-        <div className="bg-card rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('common', 'name', language)}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('common', 'price', language)}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'status', language)}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {getTranslation('admin', 'actions', language)}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border">
-              {ingredients.map((ingredient) => (
-                <tr key={ingredient.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-foreground">
-                      {typeof ingredient.name === 'string' ? ingredient.name : getLocalizedText({ en: ingredient.name?.en ?? '', ar: ingredient.name?.ar ?? '', he: ingredient.name?.he ?? '' }, language)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {formatCurrency(ingredient.price, language)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      ingredient.is_active ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
-                    }`}>
-                      {ingredient.is_active
-                        ? getTranslation('admin', 'active', language)
-                        : getTranslation('admin', 'inactive', language)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
+        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+          {ingredients.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-6 bg-muted rounded-full">
+                  <Plus className="w-16 h-16 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xl font-semibold text-foreground">No ingredients yet</p>
+                  <p className="text-muted-foreground">Get started by adding your first ingredient</p>
+                </div>
+                <button
+                  onClick={() => openModal()}
+                  className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+                >
+                  <Plus size={20} />
+                  Add Ingredient
+                </button>
+              </div>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-gradient-to-r from-muted/50 to-muted/20">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {ingredients.map((ingredient) => (
+                  <tr key={ingredient.id} className="hover:bg-muted/30 transition-all group">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-foreground">
+                        {typeof ingredient.name === 'string' ? ingredient.name : getLocalizedText({ en: ingredient.name?.en ?? '', ar: ingredient.name?.ar ?? '', he: ingredient.name?.he ?? '' }, language)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-muted-foreground max-w-xs truncate">
+                        {ingredient.description 
+                          ? (typeof ingredient.description === 'string' 
+                              ? ingredient.description 
+                              : getLocalizedText({ en: ingredient.description?.en ?? '', ar: ingredient.description?.ar ?? '', he: ingredient.description?.he ?? '' }, language))
+                          : 'No description'
+                        }
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-foreground">
+                        {formatCurrency(ingredient.price, language)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => toggleActive(ingredient)}
-                        className={`p-2 rounded ${
-                          ingredient.is_active ? 'text-accent hover:bg-accent/10' : 'text-primary hover:bg-primary/10'
+                        className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 ${
+                          ingredient.is_active 
+                            ? 'bg-green-500/10 text-green-700' 
+                            : 'bg-gray-500/10 text-gray-700'
                         }`}
-                        title={ingredient.is_active ? getTranslation('admin', 'deactivate', language) : getTranslation('admin', 'activate', language)}
                       >
-                        {ingredient.is_active ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {ingredient.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
+                        {ingredient.is_active ? 'Active' : 'Inactive'}
                       </button>
-                      <button
-                        onClick={() => openModal(ingredient)}
-                        className="text-primary hover:bg-primary/10 p-2 rounded"
-                        title={getTranslation('common', 'edit', language)}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(ingredient.id)}
-                        className="text-destructive hover:bg-destructive/10 p-2 rounded"
-                        title={getTranslation('admin', 'delete', language)}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => openModal(ingredient)}
+                          className="p-2.5 rounded-xl hover:bg-blue-500/10 text-blue-600 transition-all hover:scale-110"
+                          title="Edit"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(ingredient.id)}
+                          className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-600 transition-all hover:scale-110"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-card rounded-2xl max-w-md w-full shadow-2xl animate-slideUp">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl max-w-2xl w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-2xl font-bold text-foreground">
-                {editingIngredient
-                  ? getTranslation('admin', 'editIngredient', language)
-                  : getTranslation('admin', 'newIngredient', language)}
-              </h2>
+            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                  {editingIngredient ? 'Edit Ingredient' : 'New Ingredient'}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editingIngredient ? 'Update ingredient information' : 'Add a new ingredient to the menu'}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Language Tabs */}
-              <div className="flex border-b border-border">
+              <div className="flex gap-1 p-1 bg-muted rounded-xl">
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'en'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   English
@@ -314,10 +348,10 @@ export default function IngredientsPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('ar')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'ar'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   العربية
@@ -325,10 +359,10 @@ export default function IngredientsPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('he')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'he'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   עברית
@@ -432,59 +466,49 @@ export default function IngredientsPage() {
               
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  {getTranslation('common', 'price', language)}
+                  Price *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">$</span>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full pl-8 pr-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                    className="w-full pl-10 pr-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground font-medium"
                     placeholder="0.00"
                     required
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
-                <div>
-                  <label htmlFor="is_active" className="font-medium text-foreground">
-                    {getTranslation('admin', 'activeStatus', language)}
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    {getTranslation('admin', 'activeStatusHelp', language)}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-[hsl(var(--background))] after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
+                />
+                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
+                  Active (available for customers to add)
                 </label>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-foreground hover:bg-muted transition-all font-medium"
+                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
                 >
-                  {getTranslation('admin', 'cancel', language)}
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-medium shadow-sm hover:shadow"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
                 >
-                  {editingIngredient
-                    ? getTranslation('admin', 'updateIngredient', language)
-                    : getTranslation('admin', 'createIngredient', language)}
+                  {editingIngredient ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>

@@ -175,8 +175,8 @@ export default function CategoriesPage() {
       
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">{getTranslation('admin', 'categories', language)}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{getTranslation('admin', 'manageCategoriesSubtitle', language)}</p>
+        <h1 className="text-4xl font-bold text-foreground tracking-tight">{getTranslation('admin', 'categories', language)}</h1>
+        <p className="mt-2 text-muted-foreground">{getTranslation('admin', 'manageCategoriesSubtitle', language)} • {categories.length} {categories.length === 1 ? 'category' : 'categories'}</p>
       </div>
 
       {/* Actions Bar */}
@@ -188,35 +188,66 @@ export default function CategoriesPage() {
             placeholder={getTranslation('admin', 'searchCategories', language)}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+            className="w-full pl-10 pr-4 py-3 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground shadow-sm"
           />
+          {searchTerm && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                {filteredCategories.length} found
+              </span>
+            </div>
+          )}
         </div>
         <button
           onClick={openModal}
-          className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-lg font-medium"
+          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg hover:shadow-xl font-medium"
         >
-          <Plus size={20} />
+          <Plus size={20} strokeWidth={2.5} />
           {getTranslation('admin', 'addCategory', language)}
         </button>
       </div>
 
       {/* Categories Grid */}
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+              <div className="h-48 bg-muted animate-pulse" />
+              <div className="p-5 space-y-3">
+                <div className="h-6 bg-muted rounded animate-pulse" />
+                <div className="h-4 bg-muted rounded w-2/3 animate-pulse" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-9 bg-muted rounded flex-1 animate-pulse" />
+                  <div className="h-9 bg-muted rounded flex-1 animate-pulse" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : filteredCategories.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-2xl border-2 border-dashed border-border">
-          <ImageIcon className="mx-auto h-16 w-16 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium text-foreground">{getTranslation('admin', 'noCategoriesFound', language)}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{getTranslation('admin', 'noCategoriesHint', language)}</p>
-          <button
-            onClick={openModal}
-            className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={20} />
-            {getTranslation('admin', 'addFirstCategory', language)}
-          </button>
+        <div className="text-center py-20 bg-card rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="p-6 bg-muted rounded-full">
+              <ImageIcon className="w-16 h-16 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xl font-semibold text-foreground">
+                {searchTerm ? 'No categories found' : 'No categories yet'}
+              </p>
+              <p className="text-muted-foreground">
+                {searchTerm ? `No results for "${searchTerm}"` : 'Get started by adding your first category'}
+              </p>
+            </div>
+            {!searchTerm && (
+              <button
+                onClick={openModal}
+                className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+              >
+                <Plus size={20} />
+                {getTranslation('admin', 'addCategory', language)}
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -226,42 +257,39 @@ export default function CategoriesPage() {
               className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden hover:shadow-xl transition-all duration-300 group"
             >
               {/* Image */}
-              <div className="relative h-48 bg-muted overflow-hidden">
+              <div className="relative h-48 bg-gradient-to-br from-muted to-muted/50 overflow-hidden">
                 {category.image ? (
                   <img
                     src={category.image}
                     alt={typeof category.name === 'string' ? category.name : getLocalizedText({ en: category.name?.en ?? '', ar: category.name?.ar ?? '', he: category.name?.he ?? '' }, language)}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                    <ImageIcon className="h-16 w-16 text-muted-foreground/40" />
                   </div>
                 )}
+                {/* Status Badge */}
                 <div className="absolute top-3 right-3">
-                  <button
-                    onClick={() => toggleActive(category)}
-                    className={`p-2 rounded-full backdrop-blur-sm ${
-                      category.is_active
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                    title={category.is_active ? getTranslation('admin', 'active', language) : getTranslation('admin', 'inactive', language)}
-                  >
-                    {category.is_active ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-medium shadow-lg backdrop-blur-md transition-all ${
+                    category.is_active
+                      ? 'bg-green-500/90 text-white'
+                      : 'bg-gray-500/90 text-white'
+                  }`}>
+                    {category.is_active ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               </div>
 
               {/* Content */}
               <div className="p-5">
-                <h3 className="text-lg font-semibold text-foreground mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2 line-clamp-1">
                   {typeof category.name === 'string' ? category.name : getLocalizedText({ en: category.name?.en ?? '', ar: category.name?.ar ?? '', he: category.name?.he ?? '' }, language)}
                 </h3>
                 <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
                   {category.description 
                     ? (typeof category.description === 'string' ? category.description : getLocalizedText({ en: category.description?.en ?? '', ar: category.description?.ar ?? '', he: category.description?.he ?? '' }, language))
-                    : getTranslation('admin', 'noDescriptionProvided', language)
+                    : 'No description provided'
                   }
                 </p>
 
@@ -269,14 +297,14 @@ export default function CategoriesPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => handleEdit(category)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors font-medium"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-600 rounded-xl hover:bg-blue-500/20 transition-all font-medium hover:scale-105"
                   >
                     <Edit size={16} />
                     {getTranslation('common', 'edit', language)}
                   </button>
                   <button
                     onClick={() => handleDelete(category.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors font-medium"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-600 rounded-xl hover:bg-red-500/20 transition-all font-medium hover:scale-105"
                   >
                     <Trash2 size={16} />
                     {getTranslation('admin', 'delete', language)}
@@ -290,32 +318,40 @@ export default function CategoriesPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-card rounded-2xl max-w-md w-full shadow-2xl animate-slideUp">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div 
+            className="bg-card rounded-3xl max-w-2xl w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-2xl font-bold text-foreground">
-                {editingCategory ? getTranslation('admin', 'editCategory', language) : getTranslation('admin', 'newCategory', language)}
-              </h2>
+            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                  {editingCategory ? getTranslation('admin', 'editCategory', language) : getTranslation('admin', 'newCategory', language)}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editingCategory ? 'Update category information' : 'Add a new category to your menu'}
+                </p>
+              </div>
               <button
                 onClick={closeModal}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Language Tabs */}
-              <div className="flex border-b border-border">
+              <div className="flex gap-1 p-1 bg-muted rounded-xl">
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'en'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   English
@@ -323,10 +359,10 @@ export default function CategoriesPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('ar')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'ar'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   العربية
@@ -334,10 +370,10 @@ export default function CategoriesPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('he')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'he'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
                   }`}
                 >
                   עברית
@@ -448,15 +484,15 @@ export default function CategoriesPage() {
                   type="url"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                  className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground"
                   placeholder="https://example.com/image.jpg"
                 />
                 {formData.image && (
-                  <div className="mt-3">
+                  <div className="mt-4 p-2 bg-muted/30 rounded-xl">
                     <img
                       src={formData.image}
                       alt="Preview"
-                      className="w-full h-32 object-cover rounded-lg"
+                      className="w-full h-40 object-cover rounded-lg shadow-sm"
                       onError={(e) => {
                         e.currentTarget.src = '';
                         toast.error(getTranslation('admin', 'invalidImageUrl', language));
@@ -466,31 +502,31 @@ export default function CategoriesPage() {
                 )}
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
                 <input
                   type="checkbox"
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
+                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
                 />
-                <label htmlFor="is_active" className="ml-3 text-sm font-medium text-foreground">
+                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
                   {getTranslation('admin', 'activeVisibleCustomers', language)}
                 </label>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-2.5 border border-border rounded-xl text-foreground hover:bg-muted transition-colors font-medium"
+                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
                 >
                   {getTranslation('admin', 'cancel', language)}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-lg font-medium"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
                 >
                   {editingCategory ? getTranslation('admin', 'update', language) : getTranslation('admin', 'create', language)}
                 </button>

@@ -8,7 +8,9 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CustomerAuthProvider } from "@/contexts/CustomerAuthContext";
 import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AccessibilityMenu } from "@/components/AccessibilityMenu";
+import { RootLayoutContent } from "@/components/RootLayoutContent";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,15 +31,56 @@ export default function RootLayout({
           <LanguageProvider>
             <AuthProvider>
               <CustomerAuthProvider>
-                <div className="flex flex-col min-h-screen">
-                  <Navigation />
-                  <main className="flex-1 bg-background text-foreground pt-16">
+                <NotificationProvider>
+                  <RootLayoutContent>
                     {children}
-                  </main>
-                  <Footer />
-                </div>
-                <AccessibilityMenu />
-                <Toaster position="top-right" />
+                  </RootLayoutContent>
+                  <AccessibilityMenu />
+                </NotificationProvider>
+                <Toaster 
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: 'hsl(var(--card))',
+                      color: 'hsl(var(--foreground))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '1rem',
+                      padding: '1rem 1.25rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                    },
+                    success: {
+                      duration: 3000,
+                      iconTheme: {
+                        primary: 'hsl(var(--primary))',
+                        secondary: 'hsl(var(--primary-foreground))',
+                      },
+                      style: {
+                        background: 'hsl(var(--card))',
+                        border: '1px solid rgb(34 197 94 / 0.2)',
+                      },
+                    },
+                    error: {
+                      duration: 5000,
+                      iconTheme: {
+                        primary: 'rgb(239 68 68)',
+                        secondary: 'white',
+                      },
+                      style: {
+                        background: 'hsl(var(--card))',
+                        border: '1px solid rgb(239 68 68 / 0.2)',
+                      },
+                    },
+                    loading: {
+                      iconTheme: {
+                        primary: 'hsl(var(--primary))',
+                        secondary: 'hsl(var(--primary-foreground))',
+                      },
+                    },
+                  }}
+                />
               </CustomerAuthProvider>
             </AuthProvider>
           </LanguageProvider>

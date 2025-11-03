@@ -136,139 +136,183 @@ export default function UsersPage() {
   return (
     <AdminLayout title={getTranslation('admin', 'usersManagement', language)}>
       <div className="space-y-6" dir="ltr">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-foreground tracking-tight">Users Management</h1>
+          <p className="mt-2 text-muted-foreground">Manage user accounts and permissions • {users.length} total users</p>
+        </div>
+
         {/* Actions Bar */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="flex flex-1 gap-4 w-full sm:w-auto">
+          <div className="flex flex-1 gap-3 w-full sm:w-auto">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
               <input
                 type="text"
-                placeholder={getTranslation('admin', 'searchUsersByNamePhoneEmail', language)}
+                placeholder="Search by name, phone, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                className="w-full pl-10 pr-4 py-3 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground shadow-sm"
               />
+              {searchTerm && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    {filteredUsers.length} found
+                  </span>
+                </div>
+              )}
             </div>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-card text-foreground"
+              className="px-4 py-3 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary bg-card text-foreground shadow-sm font-medium"
             >
-              <option value="all">{getTranslation('admin', 'allRoles', language)}</option>
-              <option value="CUSTOMER">{getTranslation('admin', 'customers', language)}</option>
-              <option value="ADMIN">{getTranslation('admin', 'admins', language)}</option>
+              <option value="all">All Roles</option>
+              <option value="CUSTOMER">Customers</option>
+              <option value="ADMIN">Admins</option>
             </select>
           </div>
           <button
             onClick={openModal}
-            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-lg font-medium"
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg hover:shadow-xl font-medium"
           >
-            <UserPlus size={20} />
-            {getTranslation('admin', 'addUser', language)}
+            <UserPlus size={20} strokeWidth={2.5} />
+            Add User
           </button>
         </div>
 
         {/* Users Table */}
         <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="p-6 space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl animate-pulse">
+                  <div className="w-12 h-12 bg-muted rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-1/3" />
+                    <div className="h-3 bg-muted rounded w-1/4" />
+                  </div>
+                  <div className="w-20 h-8 bg-muted rounded-full" />
+                  <div className="flex gap-2">
+                    <div className="w-9 h-9 bg-muted rounded-lg" />
+                    <div className="w-9 h-9 bg-muted rounded-lg" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-16">
-              <User className="mx-auto h-16 w-16 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium text-foreground">{getTranslation('admin', 'noUsersFound', language)}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {searchTerm || roleFilter !== 'all' 
-                  ? getTranslation('admin', 'tryAdjustingFilters', language)
-                  : getTranslation('admin', 'getStartedCreatingUser', language)
-                }
-              </p>
+            <div className="text-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-6 bg-muted rounded-full">
+                  <User className="w-16 h-16 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xl font-semibold text-foreground">
+                    {searchTerm || roleFilter !== 'all' ? 'No users found' : 'No users yet'}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {searchTerm || roleFilter !== 'all' 
+                      ? 'Try adjusting your filters or search term'
+                      : 'Get started by adding your first user'
+                    }
+                  </p>
+                </div>
+                {!searchTerm && roleFilter === 'all' && (
+                  <button
+                    onClick={openModal}
+                    className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+                  >
+                    <UserPlus size={20} />
+                    Add User
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-border">
-                <thead className="bg-muted">
+                <thead className="bg-gradient-to-r from-muted/50 to-muted/20">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'user', language)}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                      User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'contact', language)}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Contact
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'role', language)}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'status', language)}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'joined', language)}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Joined
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {getTranslation('admin', 'actions', language)}
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-card divide-y divide-border">
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-muted/50">
+                    <tr key={user.id} className="hover:bg-muted/30 transition-all group">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-sm font-medium text-primary">
+                        <div className="flex items-center gap-3">
+                          <div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center ring-2 ring-primary/10">
+                            <span className="text-sm font-bold text-primary">
                               {user.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-foreground">{user.name}</div>
+                          <div>
+                            <div className="text-sm font-semibold text-foreground">{user.name}</div>
+                            <div className="text-xs text-muted-foreground">ID: {user.id.slice(-8)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-foreground">{user.phone}</div>
+                        <div className="text-sm font-medium text-foreground">{user.phone}</div>
                         {user.email && (
-                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                          <div className="text-xs text-muted-foreground">{user.email}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${
+                        <span className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full ${
                           user.role === 'ADMIN' 
-                            ? 'bg-primary-soft text-primary' 
-                            : 'bg-info-soft text-info'
+                            ? 'bg-purple-500/10 text-purple-700' 
+                            : 'bg-blue-500/10 text-blue-700'
                         }`}>
-                          {user.role === 'ADMIN' ? <Shield size={12} /> : <User size={12} />}
+                          {user.role === 'ADMIN' ? <Shield size={14} /> : <User size={14} />}
                           {user.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => toggleActive(user)}
-                          className={`px-2 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${
+                          className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 ${
                             user.is_active
-                              ? 'bg-success-soft text-success'
-                              : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                              ? 'bg-green-500/10 text-green-700'
+                              : 'bg-gray-500/10 text-gray-700'
                           }`}
                         >
-                          {user.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
-                          {user.is_active ? getTranslation('admin', 'active', language) : getTranslation('admin', 'inactive', language)}
+                          {user.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
+                          {user.is_active ? 'Active' : 'Inactive'}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {formatDateShort(new Date(user.created_at), language)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="text-primary hover:bg-primary-soft p-2 rounded-lg transition-colors is-link"
+                            className="p-2.5 rounded-xl hover:bg-blue-500/10 text-blue-600 transition-all hover:scale-110"
                             title="Edit"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="text-destructive hover:bg-destructive-soft p-2 rounded-lg transition-colors is-link"
+                            className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-600 transition-all hover:scale-110"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -285,40 +329,40 @@ export default function UsersPage() {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[hsl(var(--card))] p-6 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border hover:shadow-md transition-all">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-info-soft rounded-lg p-3">
-                <User className="h-6 w-6 text-info" />
+              <div className="flex-shrink-0 bg-blue-500/10 rounded-xl p-3">
+                <User className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'totalCustomers', language)}</p>
-                <p className="text-2xl font-semibold text-[hsl(var(--foreground))]">
+                <p className="text-sm font-medium text-muted-foreground">Total Customers</p>
+                <p className="text-2xl font-bold text-foreground">
                   {users.filter(u => u.role === 'CUSTOMER').length}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-[hsl(var(--card))] p-6 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border hover:shadow-md transition-all">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-primary-soft rounded-lg p-3">
-                <Shield className="h-6 w-6 text-primary" />
+              <div className="flex-shrink-0 bg-purple-500/10 rounded-xl p-3">
+                <Shield className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'admins', language)}</p>
-                <p className="text-2xl font-semibold text-[hsl(var(--foreground))]">
+                <p className="text-sm font-medium text-muted-foreground">Admins</p>
+                <p className="text-2xl font-bold text-foreground">
                   {users.filter(u => u.role === 'ADMIN').length}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-[hsl(var(--card))] p-6 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+          <div className="bg-card p-6 rounded-2xl shadow-sm border border-border hover:shadow-md transition-all">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-success-soft rounded-lg p-3">
-                <Eye className="h-6 w-6 text-success" />
+              <div className="flex-shrink-0 bg-green-500/10 rounded-xl p-3">
+                <Eye className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'activeUsers', language)}</p>
-                <p className="text-2xl font-semibold text-[hsl(var(--foreground))]">
+                <p className="text-sm font-medium text-muted-foreground">Active Users</p>
+                <p className="text-2xl font-bold text-foreground">
                   {users.filter(u => u.is_active).length}
                 </p>
               </div>
@@ -329,21 +373,26 @@ export default function UsersPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-[hsl(var(--foreground))/0.5] backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-[hsl(var(--card))] rounded-2xl max-w-md w-full shadow-2xl animate-slideUp border border-[hsl(var(--border))]">
-            <div className="flex items-center justify-between p-6 border-b border-[hsl(var(--border))]">
-              <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                {editingUser ? getTranslation('admin', 'editUser', language) : getTranslation('admin', 'newUser', language)}
-              </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-card rounded-3xl max-w-md w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                  {editingUser ? 'Edit User' : 'New User'}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editingUser ? 'Update user information' : 'Add a new user to the system'}
+                </p>
+              </div>
               <button
                 onClick={closeModal}
-                className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                   {getTranslation('admin', 'userName', language)} *
@@ -400,32 +449,32 @@ export default function UsersPage() {
                 </select>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
                 <input
                   type="checkbox"
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-[hsl(var(--ring))] border-[hsl(var(--input))] rounded"
+                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
                 />
-                <label htmlFor="is_active" className="ml-3 text-sm font-medium text-[hsl(var(--foreground))]">
-                  {getTranslation('admin', 'activeUserCanLogin', language)}
+                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
+                  Active (user can login and use the system)
                 </label>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-2.5 border border-[hsl(var(--input))] rounded-xl text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors font-medium"
+                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
                 >
-                  {getTranslation('common', 'cancel', language)}
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-2.5 bg-success text-primary-foreground rounded-xl transition-all shadow-lg font-medium"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
                 >
-                  {editingUser ? getTranslation('common', 'update', language) : getTranslation('common', 'create', language)}
+                  {editingUser ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
