@@ -71,14 +71,8 @@ class User(Document):
 
 class Category(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    name: str  # Default/fallback name
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})
     image: Optional[str] = None
     order: int = 0
     is_active: bool = True
@@ -88,21 +82,14 @@ class Category(Document):
     class Settings:
         name = "categories"
         indexes = [
-            IndexModel([("name", TEXT)]),
             IndexModel([("order", ASCENDING)]),
             IndexModel([("is_active", ASCENDING)]),
         ]
 
 class Ingredient(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    name: str  # Default/fallback name
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})
     price: float = 0.0
     image: Optional[str] = None
     is_active: bool = True
@@ -112,7 +99,6 @@ class Ingredient(Document):
     class Settings:
         name = "ingredients"
         indexes = [
-            IndexModel([("name", TEXT)]),
             IndexModel([("is_active", ASCENDING)]),
         ]
 
@@ -124,14 +110,8 @@ class MealIngredient(BaseModel):
 
 class Meal(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    name: str  # Default/fallback name
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = Field(default_factory=lambda: {"en": "", "ar": "", "he": ""})
     price: float
     image: Optional[str] = None
     category_id: str
@@ -151,7 +131,6 @@ class Meal(Document):
     class Settings:
         name = "meals"
         indexes = [
-            IndexModel([("name", TEXT)]),
             IndexModel([("category_id", ASCENDING)]),
             IndexModel([("price", ASCENDING)]),
             IndexModel([("is_active", ASCENDING)]),
@@ -173,6 +152,9 @@ class OrderItem(BaseModel):
     meal_price: float
     quantity: int = 1
     selected_ingredients: List[OrderItemIngredient] = []
+    # Track removed default ingredients
+    removed_ingredients: List[str] = []  # IDs
+    removed_ingredients_names: List[str] = []  # English names
     special_instructions: Optional[str] = None
     subtotal: float
 
@@ -337,6 +319,11 @@ class RestaurantSettings(Document):
     accept_cash: bool = True
     accept_card: bool = True
     accept_mobile_money: bool = False
+    
+    # Order Types
+    accept_delivery: bool = True
+    accept_dine_in: bool = True
+    accept_takeaway: bool = True
     
     # Other
     is_accepting_orders: bool = True

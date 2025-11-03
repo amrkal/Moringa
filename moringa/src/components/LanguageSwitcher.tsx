@@ -34,15 +34,15 @@ export default function LanguageSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
         aria-label="Change language"
       >
-        <Languages size={20} className="text-gray-600" />
-        <span className="text-sm font-medium text-gray-700">{currentLanguage.native}</span>
+        <Languages size={16} className="text-[hsl(var(--muted-foreground))]" />
+        <span className="text-sm font-medium text-[hsl(var(--foreground))] uppercase">{currentLanguage.code}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-50">
           {languages.map((lang) => (
             <button
               key={lang.code}
@@ -50,12 +50,12 @@ export default function LanguageSwitcher() {
                 setLanguage(lang.code);
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors ${
-                language === lang.code ? 'bg-green-50 text-green-600' : 'text-gray-700'
+              className={`w-full text-left px-4 py-2 hover:bg-[hsl(var(--muted))] transition-colors ${
+                language === lang.code ? 'bg-success-soft text-success' : 'text-[hsl(var(--foreground))]'
               }`}
             >
               <div className="font-medium">{lang.native}</div>
-              <div className="text-xs text-gray-500">{lang.name}</div>
+              <div className="text-xs text-[hsl(var(--muted-foreground))]">{lang.name}</div>
             </button>
           ))}
         </div>

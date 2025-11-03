@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
+import { getLocalizedText } from '@/lib/i18n';
 import api from '@/lib/api';
 // Using native <img> for resilience with unknown external URLs; avoids next/image domain config errors
 import { Plus } from 'lucide-react';
@@ -10,29 +11,23 @@ import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import { useCartStore } from '@/store/cart';
 import MealCustomizeModal, { MealForCustomize } from '@/components/MealCustomizeModal';
-import StepHeader from '@/components/StepHeader';
+
+
+interface Translation { en?: string; ar?: string; he?: string }
 
 interface Category {
   _id?: string;
   id?: string;
-  name_en: string;
-  name_ar: string;
-  name_he: string;
-  description_en?: string;
-  description_ar?: string;
-  description_he?: string;
+  name: Translation | string;
+  description?: Translation | string;
   image_url?: string;
 }
 
 interface Meal {
   _id?: string;
   id?: string;
-  name_en: string;
-  name_ar: string;
-  name_he: string;
-  description_en?: string;
-  description_ar?: string;
-  description_he?: string;
+  name: Translation | string;
+  description?: Translation | string;
   price: number;
   category_id: string;
   image_url?: string;
@@ -77,24 +72,24 @@ export default function MenuPage() {
       const normalizeCategory = (c: any): Category => ({
         _id: c._id || c.id || c?._id?.$oid || undefined,
         id: c.id || c._id || c?._id?.$oid || undefined,
-        name_en: c.name_en || c.name?.en || c.name || '',
-        name_ar: c.name_ar || c.name?.ar || '',
-        name_he: c.name_he || c.name?.he || '',
-        description_en: c.description_en || c.description?.en || c.description || '',
-        description_ar: c.description_ar || c.description?.ar || '',
-        description_he: c.description_he || c.description?.he || '',
+        name: c.name && typeof c.name === 'object'
+          ? { en: c.name?.en ?? c.name_en ?? c.name ?? '', ar: c.name?.ar ?? c.name_ar ?? '', he: c.name?.he ?? c.name_he ?? '' }
+          : { en: c.name_en ?? c.name ?? '', ar: c.name_ar ?? '', he: c.name_he ?? '' },
+        description: c.description && typeof c.description === 'object'
+          ? { en: c.description?.en ?? c.description_en ?? c.description ?? '', ar: c.description?.ar ?? c.description_ar ?? '', he: c.description?.he ?? c.description_he ?? '' }
+          : { en: c.description_en ?? c.description ?? '', ar: c.description_ar ?? '', he: c.description_he ?? '' },
         image_url: c.image_url || c.image || c.imageUrl || undefined,
       });
 
       const normalizeMeal = (m: any): Meal => ({
         _id: m._id || m.id || m?._id?.$oid || undefined,
         id: m.id || m._id || m?._id?.$oid || undefined,
-        name_en: m.name_en || m.name?.en || m.name || '',
-        name_ar: m.name_ar || m.name?.ar || '',
-        name_he: m.name_he || m.name?.he || '',
-        description_en: m.description_en || m.description?.en || m.description || '',
-        description_ar: m.description_ar || m.description?.ar || '',
-        description_he: m.description_he || m.description?.he || '',
+        name: m.name && typeof m.name === 'object'
+          ? { en: m.name?.en ?? m.name_en ?? m.name ?? '', ar: m.name?.ar ?? m.name_ar ?? '', he: m.name?.he ?? m.name_he ?? '' }
+          : { en: m.name_en ?? m.name ?? '', ar: m.name_ar ?? '', he: m.name_he ?? '' },
+        description: m.description && typeof m.description === 'object'
+          ? { en: m.description?.en ?? m.description_en ?? m.description ?? '', ar: m.description?.ar ?? m.description_ar ?? '', he: m.description?.he ?? m.description_he ?? '' }
+          : { en: m.description_en ?? m.description ?? '', ar: m.description_ar ?? '', he: m.description_he ?? '' },
         price: Number(m.price ?? m.base_price ?? 0),
         category_id: m.category_id || m.categoryId || m.category?.id || m.category || '',
         image_url: m.image_url || m.image || m.imageUrl || undefined,
@@ -126,13 +121,17 @@ export default function MenuPage() {
   };
 
   const getLocalizedName = (item: Category | Meal) => {
-    const key = `name_${language}` as keyof typeof item;
-    return (item[key] as string) || item.name_en || '';
+    const raw = (item as any).name as Translation | string | undefined;
+    if (!raw) return '';
+    const full = typeof raw === 'string' ? { en: raw, ar: '', he: '' } : { en: raw.en ?? '', ar: raw.ar ?? '', he: raw.he ?? '' };
+    return getLocalizedText(full as { en: string; ar: string; he: string }, language);
   };
 
   const getLocalizedDescription = (item: Category | Meal) => {
-    const key = `description_${language}` as keyof typeof item;
-    return (item[key] as string) || item.description_en || '';
+    const raw = (item as any).description as Translation | string | undefined;
+    if (!raw) return '';
+    const full = typeof raw === 'string' ? { en: raw, ar: '', he: '' } : { en: raw.en ?? '', ar: raw.ar ?? '', he: raw.he ?? '' };
+    return getLocalizedText(full as { en: string; ar: string; he: string }, language);
   };
 
   const mealsByCategory = useMemo(() => {
@@ -185,25 +184,25 @@ export default function MenuPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="pt-16 sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <div className="min-h-screen bg-[hsl(var(--background))]">
+        <div className="sticky top-16 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-[hsl(var(--border))]">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 overflow-x-auto py-4">
+            <div className="flex items-center gap-2 overflow-x-auto py-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-9 w-24 bg-gray-100 rounded-full animate-pulse" />
+                <div key={i} className="h-10 w-28 bg-[hsl(var(--muted))] rounded-xl animate-pulse" />
               ))}
             </div>
           </div>
         </div>
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="container mx-auto px-4 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
-                <div className="p-4 space-y-2">
-                  <div className="h-5 w-3/4 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-4 w-full bg-gray-100 rounded animate-pulse" />
-                  <div className="h-4 w-2/3 bg-gray-100 rounded animate-pulse" />
+              <div key={i} className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
+                <div className="aspect-square bg-[hsl(var(--muted))] animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-5 w-3/4 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                  <div className="h-4 w-full bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+                  <div className="h-4 w-2/3 bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
                 </div>
               </div>
             ))}
@@ -214,24 +213,27 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <StepHeader />
+    <div className="min-h-screen bg-[hsl(var(--background))]" dir={language === 'ar' || language === 'he' ? 'rtl' : 'ltr'}>
       {/* Fixed below nav */}
-      <div className="pt-16">
+      <div>
         {/* Category Tabs - Sticky (Mobile/Tablet) */}
-        <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm lg:hidden">
+        <div className="sticky top-16 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-xl border-b border-[hsl(var(--border))] lg:hidden">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 overflow-x-auto py-4 scrollbar-hide snap-x">
+            <div className="flex items-center gap-2 overflow-x-auto py-2 scrollbar-hide snap-x">
               <button
                 onClick={() => handleSelectCategory('all')}
-                className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all border ${
+                className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
                   selectedCategory === 'all'
-                    ? 'bg-primary text-white shadow-md border-primary'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-transparent'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
                 }`}
               >
                 {getTranslation('common', 'all', language)}
-                <span className="ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-white/30 text-white/90">
+                <span className={`ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-lg font-medium ${
+                  selectedCategory === 'all'
+                    ? 'bg-[hsl(var(--card))/0.2] text-primary-foreground'
+                    : 'bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]'
+                }`}>
                   {meals.length}
                 </span>
               </button>
@@ -239,17 +241,17 @@ export default function MenuPage() {
                 <button
                   key={category._id || category.id || idx}
                   onClick={() => handleSelectCategory(((category._id || category.id || '') as string).toString())}
-                  className={`px-6 py-2 rounded-full whitespace-nowrap font-medium transition-all border ${
+                  className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
                     selectedCategory === (category._id || category.id)
-                      ? 'bg-primary text-white shadow-md border-primary'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-transparent'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
                   }`}
                 >
                   <span className="snap-center">{getLocalizedName(category)}</span>
-                  <span className={`ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full ${
+                  <span className={`ml-2 inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-lg font-medium ${
                     selectedCategory === (category._id || category.id)
-                      ? 'bg-white/30 text-white/90'
-                      : 'bg-white text-gray-700'
+                      ? 'bg-[hsl(var(--card))/0.2] text-primary-foreground'
+                      : 'bg-[hsl(var(--background))] text-[hsl(var(--muted-foreground))]'
                   }`}>
                     {counts[(category._id || category.id || '') as string] || 0}
                   </span>
@@ -260,7 +262,7 @@ export default function MenuPage() {
         </div>
 
         {/* Mobile/Tablet content (single column) */}
-        <div className="container mx-auto px-4 py-8 lg:hidden">
+  <div className="container mx-auto px-4 py-4 lg:hidden">
           {categories
             .filter((c) => (counts[(c._id || c.id || '') as string] || 0) > 0)
             .map((category, idx) => {
@@ -271,27 +273,23 @@ export default function MenuPage() {
                   key={cid || idx}
                   ref={(el) => { sectionRefs.current[cid] = el; }}
                   data-section-id={cid}
-                  className="mb-10"
+                  className="mb-6"
                 >
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                  <h2 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-4 flex items-center">
                     {getLocalizedName(category)}
-                    <span className="ml-3 text-sm font-medium text-gray-500">{list.length}</span>
+                    <span className="ml-3 text-sm font-medium text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-3 py-1 rounded-lg">{list.length}</span>
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {list.map((meal, mIdx) => (
                       <div
                         key={meal._id || meal.id || mIdx}
-                        className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer group"
+                        className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] hover:shadow-md hover:border-[hsl(var(--primary))]/30 transition-all duration-300 overflow-hidden cursor-pointer group"
                         onClick={() => {
                           setActiveMeal({
                             _id: meal._id,
                             id: meal.id,
-                            name_en: meal.name_en,
-                            name_ar: meal.name_ar,
-                            name_he: meal.name_he,
-                            description_en: meal.description_en,
-                            description_ar: meal.description_ar,
-                            description_he: meal.description_he,
+                            name: meal.name,
+                            description: meal.description,
                             price: meal.price,
                             image_url: meal.image_url,
                             ingredients: (meal as any).ingredients || [],
@@ -300,12 +298,12 @@ export default function MenuPage() {
                         }}
                       >
                         {/* Image */}
-                        <div className="relative aspect-square bg-gray-200 overflow-hidden">
+                        <div className="relative aspect-square bg-[hsl(var(--muted))] overflow-hidden">
                           {meal.image_url && /^https?:\/\/.+\.(png|jpe?g|webp|avif|gif|svg)(\?.*)?$/i.test(meal.image_url) ? (
                             <img
                               src={meal.image_url}
                               alt={getLocalizedName(meal)}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                               loading="lazy"
                               referrerPolicy="no-referrer"
                             />
@@ -313,13 +311,13 @@ export default function MenuPage() {
                             <img
                               src={meal.image_url}
                               alt={getLocalizedName(meal)}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <div className="w-full h-full flex items-center justify-center text-[hsl(var(--muted-foreground))]">
                               <svg
-                                className="w-20 h-20"
+                                className="w-16 h-16 opacity-40"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -334,40 +332,34 @@ export default function MenuPage() {
                             </div>
                           )}
                           {/* Add button overlay */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <div className="bg-white rounded-full p-3 shadow-lg">
-                                <Plus className="w-6 h-6 text-primary" />
-                              </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                            <div className="bg-[hsl(var(--card))] backdrop-blur-sm rounded-full p-2.5 shadow-lg ring-2 ring-primary/20">
+                              <Plus className="w-5 h-5 text-primary" />
                             </div>
                           </div>
                         </div>
 
                         {/* Content */}
-                        <div className="p-4">
-                          <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1">
+                        <div className="p-3">
+                          <h3 className="font-semibold text-sm text-[hsl(var(--foreground))] mb-1 line-clamp-1">
                             {getLocalizedName(meal)}
                           </h3>
                           {getLocalizedDescription(meal) && (
-                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2 line-clamp-2 leading-relaxed">
                               {getLocalizedDescription(meal)}
                             </p>
                           )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xl font-bold text-primary">{formatPrice(meal.price)}</span>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-base font-semibold text-primary">{formatPrice(meal.price, language)}</span>
                             <button
-                              className="bg-primary text-white px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+                              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveMeal({
                                   _id: meal._id,
                                   id: meal.id,
-                                  name_en: meal.name_en,
-                                  name_ar: meal.name_ar,
-                                  name_he: meal.name_he,
-                                  description_en: meal.description_en,
-                                  description_ar: meal.description_ar,
-                                  description_he: meal.description_he,
+                                  name: meal.name,
+                                  description: meal.description,
                                   price: meal.price,
                                   image_url: meal.image_url,
                                   ingredients: (meal as any).ingredients || [],
@@ -388,20 +380,24 @@ export default function MenuPage() {
         </div>
 
         {/* Desktop content: split layout with left categories and right meals */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-6 container mx-auto px-4 py-8">
+  <div className="hidden lg:grid lg:grid-cols-12 gap-6 container mx-auto px-4 py-4">
           {/* Left: Categories list */}
           <aside className="lg:col-span-3 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
             <div className="space-y-2">
               <button
                 onClick={() => handleSelectCategory('all')}
-                className={`w-full text-left px-4 py-3 rounded-lg border transition ${
-                  selectedCategory === 'all' ? 'bg-primary text-white border-primary' : 'bg-white hover:bg-gray-50 border-gray-200'
+                className={`w-full text-left px-4 py-3.5 rounded-xl font-medium transition-all ${
+                  selectedCategory === 'all' 
+                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{getTranslation('common', 'all', language)}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    selectedCategory === 'all' ? 'bg-white/30 text-white/90' : 'bg-gray-100 text-gray-700'
+                    selectedCategory === 'all' 
+                      ? 'bg-[hsl(var(--card))/0.3] text-[hsl(var(--foreground))/0.9]' 
+                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
                   }`}>{meals.length}</span>
                 </div>
               </button>
@@ -416,13 +412,17 @@ export default function MenuPage() {
                     key={cid || idx}
                     onClick={() => handleSelectCategory(cid)}
                     className={`w-full text-left px-4 py-3 rounded-lg border transition ${
-                      active ? 'bg-primary text-white border-primary' : 'bg-white hover:bg-gray-50 border-gray-200'
+                      active 
+                        ? 'bg-primary text-primary-foreground border-primary' 
+                        : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border-[hsl(var(--border))] text-[hsl(var(--foreground))]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium line-clamp-1">{getLocalizedName(category)}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        active ? 'bg-white/30 text-white/90' : 'bg-gray-100 text-gray-700'
+                        active 
+                          ? 'bg-[hsl(var(--card))/0.3] text-[hsl(var(--foreground))/0.9]' 
+                          : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
                       }`}>{count}</span>
                     </div>
                   </button>
@@ -445,25 +445,21 @@ export default function MenuPage() {
                     data-section-id={cid}
                     className="mb-10"
                   >
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                    <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center">
                       {getLocalizedName(category)}
-                      <span className="ml-3 text-sm font-medium text-gray-500">{list.length}</span>
+                      <span className="ml-3 text-sm font-medium text-muted-foreground">{list.length}</span>
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                       {list.map((meal, mIdx) => (
                         <div
                           key={meal._id || meal.id || mIdx}
-                          className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer group"
+                          className="bg-card rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer group border border-border"
                           onClick={() => {
                             setActiveMeal({
                               _id: meal._id,
                               id: meal.id,
-                              name_en: meal.name_en,
-                              name_ar: meal.name_ar,
-                              name_he: meal.name_he,
-                              description_en: meal.description_en,
-                              description_ar: meal.description_ar,
-                              description_he: meal.description_he,
+                              name: meal.name,
+                              description: meal.description,
                               price: meal.price,
                               image_url: meal.image_url,
                               ingredients: (meal as any).ingredients || [],
@@ -472,7 +468,7 @@ export default function MenuPage() {
                           }}
                         >
                           {/* Image */}
-                          <div className="relative aspect-square bg-gray-200 overflow-hidden">
+                          <div className="relative aspect-square bg-muted overflow-hidden">
                             {meal.image_url && /^https?:\/\/.+\.(png|jpe?g|webp|avif|gif|svg)(\?.*)?$/i.test(meal.image_url) ? (
                               <img
                                 src={meal.image_url}
@@ -489,7 +485,7 @@ export default function MenuPage() {
                                 loading="lazy"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                                 <svg
                                   className="w-20 h-20"
                                   fill="none"
@@ -506,9 +502,9 @@ export default function MenuPage() {
                               </div>
                             )}
                             {/* Add button overlay */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-[hsl(var(--foreground))/0] group-hover:bg-[hsl(var(--foreground))/0.2] transition-all duration-300 flex items-center justify-center">
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <div className="bg-white rounded-full p-3 shadow-lg">
+                                <div className="bg-card rounded-full p-3 shadow-lg">
                                   <Plus className="w-6 h-6 text-primary" />
                                 </div>
                               </div>
@@ -517,29 +513,25 @@ export default function MenuPage() {
 
                           {/* Content */}
                           <div className="p-4">
-                            <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1">
+                            <h3 className="font-bold text-lg text-foreground mb-1 line-clamp-1">
                               {getLocalizedName(meal)}
                             </h3>
                             {getLocalizedDescription(meal) && (
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                                 {getLocalizedDescription(meal)}
                               </p>
                             )}
                             <div className="flex items-center justify-between">
-                              <span className="text-xl font-bold text-primary">{formatPrice(meal.price)}</span>
+                              <span className="text-xl font-bold text-primary">{formatPrice(meal.price, language)}</span>
                               <button
-                                className="bg-primary text-white px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+                                className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setActiveMeal({
                                     _id: meal._id,
                                     id: meal.id,
-                                    name_en: meal.name_en,
-                                    name_ar: meal.name_ar,
-                                    name_he: meal.name_he,
-                                    description_en: meal.description_en,
-                                    description_ar: meal.description_ar,
-                                    description_he: meal.description_he,
+                                    name: meal.name,
+                                    description: meal.description,
                                     price: meal.price,
                                     image_url: meal.image_url,
                                     ingredients: (meal as any).ingredients || [],
@@ -568,7 +560,7 @@ export default function MenuPage() {
           <Link href="/cart" className="block">
             <div className="flex items-center justify-between bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg">
               <div className="font-semibold">{itemCount} {itemCount === 1 ? 'item' : 'items'}</div>
-              <div className="font-bold">{formatPrice(totalAmount)}</div>
+              <div className="font-bold">{formatPrice(totalAmount, language)}</div>
               <div className="text-sm font-medium">View Cart</div>
             </div>
           </Link>

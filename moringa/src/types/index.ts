@@ -1,8 +1,8 @@
 // Core entity types
 export interface Category {
   id: string;
-  name: string;
-  description: string;
+    name: { en: string; ar: string; he: string };
+    description: { en: string; ar: string; he: string };
   image: string;
   isActive: boolean;
   order: number;
@@ -13,8 +13,8 @@ export interface Category {
 
 export interface Meal {
   id: string;
-  name: string;
-  description: string;
+    name: { en: string; ar: string; he: string };
+    description: { en: string; ar: string; he: string };
   price: number;
   image: string;
   isActive: boolean;
@@ -27,8 +27,8 @@ export interface Meal {
 
 export interface Ingredient {
   id: string;
-  name: string;
-  description?: string;
+    name: { en: string; ar: string; he: string };
+    description: { en: string; ar: string; he: string };
   price: number; // Additional price for this ingredient
   isActive: boolean;
   createdAt: Date;
@@ -149,16 +149,16 @@ export enum PaymentStatus {
 
 // UI and Form types
 export interface CategoryFormData {
-  name: string;
-  description: string;
+  name: { en: string; ar: string; he: string };
+  description: { en: string; ar: string; he: string };
   image: string;
   isActive: boolean;
   order: number;
 }
 
 export interface MealFormData {
-  name: string;
-  description: string;
+  name: { en: string; ar: string; he: string };
+  description: { en: string; ar: string; he: string };
   price: number;
   image: string;
   categoryId: string;
@@ -171,8 +171,8 @@ export interface MealFormData {
 }
 
 export interface IngredientFormData {
-  name: string;
-  description?: string;
+  name: { en: string; ar: string; he: string };
+  description: { en: string; ar: string; he: string };
   price: number;
   isActive: boolean;
 }

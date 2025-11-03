@@ -58,6 +58,10 @@ function hexToHslTuple(hex: string): string | null {
 function applyCssVars(vars: ThemeVars) {
   if (typeof document === 'undefined') return; // SSR guard
   const root = document.documentElement;
+  // Force light theme to avoid system dark overriding admin backgrounds
+  // This ensures bg-card/bg-background use light palette unless explicitly changed later.
+  root.classList.add('light');
+  root.classList.remove('dark');
   if (vars.primary) {
     const hsl = hexToHslTuple(vars.primary);
     if (hsl) {
@@ -102,13 +106,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const s = res.data || {};
         console.log('ThemeProvider: Loaded settings', s);
         const vars: ThemeVars = {
-          primary: s.theme_primary || '#16a34a', // default green-600
-          primaryForeground: s.theme_primary_foreground || '#ffffff',
-          background: s.theme_background || '#f9fafb', // gray-50
-          foreground: s.theme_foreground || '#111827', // gray-900
-          accent: s.theme_accent || '#22c55e', // green-500
-          accentForeground: s.theme_accent_foreground || '#ffffff',
-          radius: s.theme_radius || '0.5rem',
+          primary: s.theme_primary,
+          primaryForeground: s.theme_primary_foreground,
+          background: s.theme_background,
+          foreground: s.theme_foreground,
+          accent: s.theme_accent,
+          accentForeground: s.theme_accent_foreground,
+          radius: s.theme_radius,
         };
         if (!cancelled) {
           setThemeState(vars);
@@ -118,19 +122,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error('ThemeProvider: Failed to load settings', e);
-        // fallback to defaults
-        const vars: ThemeVars = {
-          primary: '#16a34a',
-          primaryForeground: '#ffffff',
-          background: '#f9fafb',
-          foreground: '#111827',
-          accent: '#22c55e',
-          accentForeground: '#ffffff',
-          radius: '0.5rem',
-        };
+        // fallback: don't override CSS defaults, just mark as loaded
         if (!cancelled) {
-          setThemeState(vars);
-          applyCssVars(vars);
+          setThemeState({});
           setLoaded(true);
         }
       }

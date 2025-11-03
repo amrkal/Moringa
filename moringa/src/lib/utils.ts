@@ -5,20 +5,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(price);
+export function formatPrice(price: number, language: 'en' | 'ar' | 'he' = 'en'): string {
+  // Import formatCurrency from format.ts for consistent currency display
+  const { formatCurrency } = require('./format');
+  return formatCurrency(price, language, 'ILS');
 }
 
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
+export function formatDate(date: Date, language: 'en' | 'ar' | 'he' = 'en'): string {
+  const locale = language === 'ar' ? 'ar-IL' : language === 'he' ? 'he-IL' : 'en-US';
+  return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+  }).format(date);
+}
+
+export function formatDateShort(date: Date, language: 'en' | 'ar' | 'he' = 'en'): string {
+  const locale = language === 'ar' ? 'ar-IL' : language === 'he' ? 'he-IL' : 'en-US';
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   }).format(date);
 }
 

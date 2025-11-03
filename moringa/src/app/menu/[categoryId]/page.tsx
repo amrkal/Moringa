@@ -52,7 +52,7 @@ export default async function CategoryPage({
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+  <div className="container mx-auto px-4 py-4">
       <div className="mb-8">
         <Link href="/menu">
           <Button variant="ghost" className="mb-4">
@@ -61,8 +61,8 @@ export default async function CategoryPage({
           </Button>
         </Link>
         
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">{category.name}</h1>
-        <p className="text-lg text-gray-600 mb-6">{category.description}</p>
+  <h1 className="text-4xl font-bold text-[hsl(var(--foreground))] mb-4">{category.name}</h1>
+  <p className="text-lg text-[hsl(var(--muted-foreground))] mb-6">{category.description}</p>
         
         <SearchBar />
       </div>
@@ -79,8 +79,8 @@ export default async function CategoryPage({
           }))
         }))} />
       ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">
+  <div className="text-center py-6">
+          <p className="text-[hsl(var(--muted-foreground))] text-lg">
             {search 
               ? `No meals found matching "${search}" in ${category.name}`
               : `No meals available in ${category.name} category`

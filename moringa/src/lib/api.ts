@@ -13,7 +13,10 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // Prefer admin token but fall back to customer token so both flows work
+    const adminToken = localStorage.getItem('token');
+    const customerToken = localStorage.getItem('customerToken');
+    const token = adminToken || customerToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,9 +30,28 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear all auth tokens
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/admin/login';
+      localStorage.removeItem('customerToken');
+      localStorage.removeItem('customerUser');
+
+      try {
+        const pathname = window.location?.pathname || '';
+        // If user is on an admin page, redirect to admin login
+        if (pathname.startsWith('/admin')) {
+          window.location.href = '/admin/login';
+        } else {
+          // For customer pages, trigger re-authentication by reloading
+          // This will reset the AuthContext state
+          if (typeof window !== 'undefined' && (pathname.startsWith('/checkout') || pathname.startsWith('/orders'))) {
+            // Dispatch custom event to notify AuthContext to reset state
+            window.dispatchEvent(new CustomEvent('auth:logout'));
+          }
+        }
+      } catch (e) {
+        console.error('Error handling 401 redirect logic', e);
+      }
     }
     return Promise.reject(error);
   }
@@ -64,6 +86,12 @@ export const authApi = {
     role?: 'CUSTOMER' | 'ADMIN';
   }) =>
     api.post('/auth/register', userData),
+  
+  sendOTP: (phone: string, method: 'sms' | 'whatsapp' = 'sms') =>
+    api.post('/auth/verify-phone', { phone, method: method.toUpperCase() }),
+  
+  verifyOTP: (phone: string, otpCode: string) =>
+    api.post('/auth/confirm-phone', { phone, code: otpCode }),
   
   verifyPhone: (phone: string, code: string) =>
     api.post('/auth/verify-phone', { phone, code }),

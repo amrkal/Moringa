@@ -93,15 +93,38 @@ async def confirm_phone_verification(
             status_code=400,
             detail="Invalid verification code"
         )
-    
+
+    # Find or create user by phone
     user = await crud.crud_user.get_by_phone(phone=verification_confirm.phone)
-    if user:
-        user_update = schemas.UserUpdate(is_verified=True)
-        await crud.crud_user.update(db_obj=user, obj_in=user_update)
-    
+    if not user:
+        # Create a minimal customer user record for OTP login
+        user = await crud.crud_user.create(
+            obj_in=schemas.UserCreate(
+                phone=verification_confirm.phone,
+                name="Guest",
+                password=None,
+            )
+        )
+
+    # Mark verified
+    user_update = schemas.UserUpdate(is_verified=True)
+    user = await crud.crud_user.update(db_obj=user, obj_in=user_update)
+
+    # Issue access token similar to /login
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        data={"sub": user.phone}, expires_delta=access_token_expires
+    )
+
     return schemas.APIResponse(
         success=True,
-        message="Phone number verified successfully"
+        message="Phone number verified successfully",
+        data={
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user,
+            "verified": True,
+        },
     )
 
 # Admin endpoints
@@ -126,3 +149,35 @@ async def read_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+@router.put("/{user_id}", response_model=schemas.User)
+async def update_user(
+    *,
+    user_id: str,
+    user_in: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_admin_user)
+):
+    """Update user by ID (Admin only)."""
+    user = await crud.crud_user.get(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user = await crud.crud_user.update(db_obj=user, obj_in=user_in)
+    return user
+
+@router.delete("/{user_id}")
+async def delete_user(
+    *,
+    user_id: str,
+    current_user: models.User = Depends(get_current_admin_user)
+):
+    """Delete user by ID (Admin only)."""
+    user = await crud.crud_user.get(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent deleting yourself
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    await crud.crud_user.remove(id=user_id)
+    return {"success": True, "message": "User deleted successfully"}

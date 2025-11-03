@@ -35,14 +35,8 @@ class PaymentStatus(str, Enum):
 
 # Base schemas
 class CategoryBase(BaseModel):
-    name: str
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = {"en": "", "ar": "", "he": ""}
     image: Optional[str] = None
     is_active: bool = True
     order: int = 0
@@ -51,14 +45,8 @@ class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str] = None
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: Optional[dict] = None
+    description: Optional[dict] = None
     image: Optional[str] = None
     is_active: Optional[bool] = None
     order: Optional[int] = None
@@ -76,14 +64,8 @@ class CategoryWithMealCount(Category):
 
 # Ingredient schemas
 class IngredientBase(BaseModel):
-    name: str
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = {"en": "", "ar": "", "he": ""}
     price: float = 0.0
     is_active: bool = True
 
@@ -91,14 +73,8 @@ class IngredientCreate(IngredientBase):
     pass
 
 class IngredientUpdate(BaseModel):
-    name: Optional[str] = None
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: Optional[dict] = None
+    description: Optional[dict] = None
     price: Optional[float] = None
     is_active: Optional[bool] = None
 
@@ -115,11 +91,15 @@ class MealIngredientBase(BaseModel):
     ingredient_id: str
     is_optional: bool = False
     is_default: bool = False
+    extra_price: float = 0.0
 
 class MealIngredientCreate(MealIngredientBase):
     pass
 
 class MealIngredient(MealIngredientBase):
+    pass
+    
+class MealIngredientWithDetails(MealIngredientBase):
     id: str
     meal_id: str
     ingredient: Ingredient
@@ -129,14 +109,8 @@ class MealIngredient(MealIngredientBase):
 
 # Meal schemas
 class MealBase(BaseModel):
-    name: str
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: dict  # {"en": "...", "ar": "...", "he": "..."}
+    description: dict = {"en": "", "ar": "", "he": ""}
     price: float
     image: Optional[str] = None
     is_active: bool = True
@@ -146,14 +120,8 @@ class MealCreate(MealBase):
     ingredients: List[MealIngredientCreate] = []
 
 class MealUpdate(BaseModel):
-    name: Optional[str] = None
-    name_en: Optional[str] = None
-    name_ar: Optional[str] = None
-    name_he: Optional[str] = None
-    description: Optional[str] = None
-    description_en: Optional[str] = None
-    description_ar: Optional[str] = None
-    description_he: Optional[str] = None
+    name: Optional[dict] = None
+    description: Optional[dict] = None
     price: Optional[float] = None
     image: Optional[str] = None
     is_active: Optional[bool] = None
@@ -186,11 +154,13 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     name: Optional[str] = None
+    is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
 
 class User(UserBase):
     id: str
     is_verified: bool = False
+    is_active: bool = True
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -220,7 +190,9 @@ class OrderItemBase(BaseModel):
     special_instructions: Optional[str] = None
 
 class OrderItemCreate(OrderItemBase):
+    meal_name: Optional[str] = None  # Optional meal name sent from frontend
     selected_ingredients: List[OrderItemIngredientCreate] = []
+    removed_ingredients: List[str] = []  # List of ingredient IDs that were removed
 
 class OrderItem(OrderItemBase):
     id: str
@@ -337,6 +309,9 @@ class RestaurantSettingsBase(BaseModel):
     accept_cash: bool
     accept_card: bool
     accept_mobile_money: bool
+    accept_delivery: bool
+    accept_dine_in: bool
+    accept_takeaway: bool
     is_accepting_orders: bool
     # Theme
     theme_primary: Optional[str] = None
@@ -373,6 +348,9 @@ class RestaurantSettingsUpdate(BaseModel):
     accept_cash: Optional[bool] = None
     accept_card: Optional[bool] = None
     accept_mobile_money: Optional[bool] = None
+    accept_delivery: Optional[bool] = None
+    accept_dine_in: Optional[bool] = None
+    accept_takeaway: Optional[bool] = None
     is_accepting_orders: Optional[bool] = None
     # Theme
     theme_primary: Optional[str] = None

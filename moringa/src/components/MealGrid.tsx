@@ -8,18 +8,13 @@ import { useState } from 'react';
 import { MealDetailsDialog } from '@/components/MealDetailsDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
+import { getLocalizedText } from '@/lib/i18n';
 
 interface MealGridProps {
   meals: Array<{
     id: string;
-    name: string;
-    name_en?: string;
-    name_ar?: string;
-    name_he?: string;
-    description: string;
-    description_en?: string;
-    description_ar?: string;
-    description_he?: string;
+    name?: { en?: string; ar?: string; he?: string } | string;
+    description?: { en?: string; ar?: string; he?: string } | string;
     price: number;
     image: string;
     ingredients: Array<{
@@ -28,15 +23,9 @@ interface MealGridProps {
       isDefault: boolean;
       ingredient: {
         id: string;
-        name: string;
-        name_en?: string;
-        name_ar?: string;
-        name_he?: string;
+        name?: { en?: string; ar?: string; he?: string } | string;
         price: number;
-        description?: string;
-        description_en?: string;
-        description_ar?: string;
-        description_he?: string;
+        description?: { en?: string; ar?: string; he?: string } | string;
       };
     }>;
   }>;
@@ -44,39 +33,49 @@ interface MealGridProps {
 
 export function MealGrid({ meals }: MealGridProps) {
   const [selectedMeal, setSelectedMeal] = useState<typeof meals[0] | null>(null);
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {meals.map((meal) => (
-          <Card key={meal.id} className="hover:shadow-lg transition-shadow duration-200">
-            <div className="aspect-video bg-gray-200 rounded-t-lg overflow-hidden">
-              <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
-                <span className="text-4xl">🍽️</span>
+          <Card key={meal.id} className="hover:shadow-md transition-shadow duration-200">
+            <div className="aspect-video bg-[hsl(var(--muted))] rounded-t-lg overflow-hidden">
+              <div className="w-full h-full bg-gradient-to-br from-[hsl(var(--accent))/0.15] to-[hsl(var(--primary))/0.15] flex items-center justify-center">
+                <span className="text-3xl">🍽️</span>
               </div>
             </div>
-            <CardHeader>
-              <CardTitle className="text-xl">
-                {t(meal.name, { en: meal.name_en, ar: meal.name_ar, he: meal.name_he })}
+            <CardHeader className="p-3">
+              <CardTitle className="text-base">
+                {getLocalizedText(
+                  typeof meal.name === 'string'
+                    ? { en: meal.name, ar: '', he: '' }
+                    : { en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' },
+                  language
+                )}
               </CardTitle>
-              <CardDescription className="line-clamp-2">
-                {t(meal.description, { en: meal.description_en, ar: meal.description_ar, he: meal.description_he })}
+              <CardDescription className="line-clamp-2 text-xs">
+                {getLocalizedText(
+                  typeof meal.description === 'string'
+                    ? { en: meal.description, ar: '', he: '' }
+                    : { en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' },
+                  language
+                )}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">
-                {formatPrice(meal.price)}
+            <CardContent className="p-3 pt-0">
+              <p className="text-xl font-bold text-success">
+                {formatPrice(meal.price, language)}
               </p>
               {meal.ingredients.length > 0 && (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
                   {getTranslation('common', 'customizableWith', language)} {meal.ingredients.length} {getTranslation('common', 'ingredientOptions', language)}
                 </p>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="p-3 pt-0">
               <Button 
-                className="w-full"
+                className="w-full py-2 text-sm"
                 onClick={() => setSelectedMeal(meal)}
               >
                 <Plus className="mr-2 h-4 w-4" />

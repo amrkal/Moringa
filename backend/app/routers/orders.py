@@ -6,7 +6,7 @@ from .. import crud, models, schemas
 
 router = APIRouter()
 
-@router.post("/", response_model=schemas.Order)
+@router.post("/", response_model=models.Order)
 async def create_order(
     *,
     order_in: schemas.OrderCreate,
@@ -32,7 +32,7 @@ async def create_order(
     order = await crud.crud_order.create(obj_in=order_in, user_id=current_user.id)
     return order
 
-@router.get("/my-orders", response_model=List[schemas.Order])
+@router.get("/my-orders", response_model=List[models.Order])
 async def read_my_orders(
     skip: int = 0,
     limit: int = 100,
@@ -44,7 +44,7 @@ async def read_my_orders(
     )
     return orders
 
-@router.get("/{order_id}", response_model=schemas.Order)
+@router.get("/{order_id}", response_model=models.Order)
 async def read_order(
     *,
     order_id: str,
@@ -62,7 +62,7 @@ async def read_order(
     return order
 
 # Admin endpoints
-@router.get("/", response_model=List[schemas.OrderWithUser])
+@router.get("/", response_model=List[models.Order])
 async def read_orders(
     skip: int = 0,
     limit: int = 100,
@@ -78,7 +78,7 @@ async def read_orders(
         orders = await crud.crud_order.get_multi(skip=skip, limit=limit)
     return orders
 
-@router.put("/{order_id}", response_model=schemas.Order)
+@router.put("/{order_id}", response_model=models.Order)
 async def update_order(
     *,
     order_id: str,

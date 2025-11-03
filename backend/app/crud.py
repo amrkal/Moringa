@@ -261,22 +261,115 @@ class CRUDOrder:
         # Generate order number
         order_count = await models.Order.count() + 1
         order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{order_count:06d}"
-        
+
+        # Fetch user for customer details
+        user = await crud_user.get(id=user_id)
+        customer_name = user.name if user and getattr(user, "name", None) else "Guest"
+        customer_email = user.email if user else None
+
+        # Build order items with full details required by models.Order
+        order_items: list[models.OrderItem] = []
+        items_subtotal = 0.0
+        for item in obj_in.items:
+            meal = await models.Meal.get(item.meal_id)
+            if not meal:
+                # Should be validated by router; safeguard
+                continue
+            # Build selected ingredients details
+            selected_ings: list[models.OrderItemIngredient] = []
+            extras_total = 0.0
+            for sel in item.selected_ingredients:
+                ing = await models.Ingredient.get(sel.ingredient_id)
+                if not ing:
+                    continue
+                # Ensure ingredient name is stored as a plain string (English as default, like meals)
+                if isinstance(ing.name, str):
+                    ing_name_str = ing.name
+                elif isinstance(ing.name, dict):
+                    # Strictly use English if available; otherwise leave empty
+                    ing_name_str = ing.name.get('en') or ''
+                else:
+                    ing_name_str = str(ing.name or '')
+                selected_ings.append(
+                    models.OrderItemIngredient(
+                        ingredient_id=ing.id,
+                        name=ing_name_str,
+                        price=ing.price,
+                    )
+                )
+                extras_total += float(ing.price or 0)
+
+            unit_price = float(meal.price) + extras_total
+            line_subtotal = unit_price * item.quantity
+            items_subtotal += line_subtotal
+
+            # Use meal_name from request if provided, otherwise extract English from meal.name
+            meal_name_str = item.meal_name if item.meal_name else (
+                meal.name if isinstance(meal.name, str) else meal.name.get('en', '')
+            )
+            
+            # Compute removed ingredients (IDs and names in English)
+            removed_ids: list[str] = []
+            removed_names: list[str] = []
+            try:
+                for rid in getattr(item, 'removed_ingredients', []) or []:
+                    # Match both raw id and ObjectId-like strings
+                    clean_id = str(rid).replace("ObjectId('", '').replace("')", '').replace('"', '').replace("ObjectId(\"", '').replace("\")", '')
+                    ing = await models.Ingredient.get(clean_id)
+                    if ing:
+                        removed_ids.append(ing.id)
+                        if isinstance(ing.name, str):
+                            removed_names.append(ing.name)
+                        elif isinstance(ing.name, dict):
+                            removed_names.append(ing.name.get('en') or '')
+                        else:
+                            removed_names.append(str(ing.name or ''))
+                    else:
+                        removed_ids.append(str(rid))
+            except Exception:
+                # Be resilient; if anything goes wrong, still create order without removed names
+                removed_ids = [str(r) for r in (getattr(item, 'removed_ingredients', []) or [])]
+
+            order_items.append(
+                models.OrderItem(
+                    meal_id=meal.id,
+                    meal_name=meal_name_str,
+                    meal_price=float(meal.price),
+                    quantity=item.quantity,
+                    selected_ingredients=selected_ings,
+                    removed_ingredients=removed_ids,
+                    removed_ingredients_names=removed_names,
+                    special_instructions=item.special_instructions,
+                    subtotal=line_subtotal,
+                )
+            )
+
         # Calculate totals
-        subtotal = sum(item.price * item.quantity for item in obj_in.items)
-        tax_amount = subtotal * 0.08  # 8% tax
+        subtotal = items_subtotal
+        tax_amount = subtotal * 0.08  # 8% tax (could be moved to settings)
         delivery_fee = 5.0 if obj_in.order_type == models.OrderType.DELIVERY else 0.0
         total_amount = subtotal + tax_amount + delivery_fee
-        
+
+        # Create order document
         db_obj = models.Order(
             id=str(uuid.uuid4()),
             user_id=user_id,
-            order_number=order_number,
+            status=models.OrderStatus.PENDING,
+            order_type=models.OrderType(obj_in.order_type),
+            payment_method=models.PaymentMethod(obj_in.payment_method),
+            payment_status=models.PaymentStatus.PENDING,
+            items=order_items,
             subtotal=subtotal,
             tax_amount=tax_amount,
             delivery_fee=delivery_fee,
+            discount_amount=0.0,
             total_amount=total_amount,
-            **obj_in.dict()
+            customer_name=customer_name,
+            customer_phone=obj_in.phone_number,
+            customer_email=customer_email,
+            delivery_address=obj_in.delivery_address,
+            special_instructions=obj_in.special_instructions,
+            order_number=order_number,
         )
         return await db_obj.insert()
     

@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { ThemeProvider } from "@/contexts/ThemeProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { CustomerAuthProvider } from "@/contexts/CustomerAuthContext";
+import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
+import { AccessibilityMenu } from "@/components/AccessibilityMenu";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,15 +25,23 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        <ThemeProvider>
+        <AccessibilityProvider>
           <LanguageProvider>
-            <Navigation />
-            <main className="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-              {children}
-            </main>
-            <Toaster position="top-right" />
+            <AuthProvider>
+              <CustomerAuthProvider>
+                <div className="flex flex-col min-h-screen">
+                  <Navigation />
+                  <main className="flex-1 bg-background text-foreground pt-16">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+                <AccessibilityMenu />
+                <Toaster position="top-right" />
+              </CustomerAuthProvider>
+            </AuthProvider>
           </LanguageProvider>
-        </ThemeProvider>
+        </AccessibilityProvider>
       </body>
     </html>
   );

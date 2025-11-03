@@ -1,53 +1,80 @@
-"use client";
+'use client';
 
 import { usePathname } from 'next/navigation';
-
-const steps = [
-  { key: 'enter', label: 'Enter', href: '/' },
-  { key: 'menu', label: 'Menu', href: '/menu' },
-  { key: 'basket', label: 'Basket', href: '/cart' },
-  { key: 'payment', label: 'Payment', href: '/checkout' },
-];
+import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation } from '../lib/translations';
+import { Check } from 'lucide-react';
 
 function currentStepFromPath(path: string): string {
-  if (path.startsWith('/checkout')) return 'payment';
-  if (path.startsWith('/cart')) return 'basket';
+  if (path.startsWith('/checkout')) return 'checkout';
+  if (path.startsWith('/cart')) return 'cart';
   if (path.startsWith('/menu')) return 'menu';
-  return 'enter';
+  return 'menu';
 }
 
 export default function StepHeader() {
   const pathname = usePathname();
+  const { language } = useLanguage();
   const current = currentStepFromPath(pathname || '/');
 
+  const steps = [
+    { key: 'menu', label: getTranslation('common', 'menu', language) },
+    { key: 'cart', label: getTranslation('common', 'cart', language) },
+    { key: 'checkout', label: getTranslation('common', 'checkout', language) },
+    { key: 'confirmation', label: getTranslation('common', 'confirmation', language) },
+  ];
+
+  const currentIndex = steps.findIndex((s) => s.key === current);
+
   return (
-    <div className="w-full border-b border-gray-200 bg-white">
+    <div className="w-full border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
       <div className="container mx-auto px-4">
-        <ol className="flex items-center justify-center gap-4 py-4 text-sm">
-          {steps.map((s, idx) => {
-            const isActive = s.key === current;
-            const isCompleted = steps.findIndex((x) => x.key === current) > idx;
+        <div className="flex items-center justify-center gap-2 md:gap-4 py-4">
+          {steps.map((step, index) => {
+            const isActive = step.key === current;
+            const isCompleted = index < currentIndex;
+            const isLast = index === steps.length - 1;
+
             return (
-              <li key={s.key} className="flex items-center gap-2">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center border text-xs font-semibold transition ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : isCompleted
-                      ? 'bg-primary/10 text-primary border-primary/30'
-                      : 'bg-gray-100 text-gray-600 border-gray-300'
-                  }`}
-                >
-                  {idx + 1}
+              <div key={step.key} className="flex items-center gap-2">
+                {/* Step circle and label */}
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
+                      isCompleted
+                        ? 'bg-primary border-primary text-primary-foreground'
+                        : isActive
+                        ? 'border-primary text-primary bg-primary-soft'
+                        : 'border-[hsl(var(--input))] text-[hsl(var(--muted-foreground))] bg-[hsl(var(--card))]'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <span className="text-sm font-semibold">{index + 1}</span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm font-medium hidden sm:inline transition-colors ${
+                      isActive ? 'text-primary' : isCompleted ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>{s.label}</span>
-                {idx < steps.length - 1 && (
-                  <span className="mx-2 h-px w-8 bg-gray-200" aria-hidden />
+
+                {/* Connector line */}
+                {!isLast && (
+                  <div
+                    className={`h-0.5 w-8 md:w-12 transition-colors ${
+                      isCompleted ? 'bg-primary' : 'bg-[hsl(var(--muted))]'
+                    }`}
+                  />
                 )}
-              </li>
+              </div>
             );
           })}
-        </ol>
+        </div>
       </div>
     </div>
   );

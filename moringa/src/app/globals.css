@@ -1,51 +1,168 @@
 @import "tailwindcss";
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 9%;
+  /* Modern food delivery palette - appetizing, trustworthy, energetic */
+  /* Inspired by Uber Eats, DoorDash, and premium food brands */
+  
+  --background: 0 0% 98%;           /* Soft off-white - clean, inviting */
+  --foreground: 240 10% 15%;        /* Rich charcoal - professional, readable */
+  --card: 0 0% 100%;                /* Pure white cards - clean, minimal */
+  --card-foreground: 240 10% 15%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9%;
-  --primary: 142 86% 28%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 9%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  --ring: 142 86% 28%;
-  --radius: 0.5rem;
+  --popover-foreground: 240 10% 15%;
+  
+  /* Primary: Vibrant orange-red - appetite stimulating, energetic, bold */
+  --primary: 14 90% 53%;            /* Bright coral-orange #f97316 - food industry standard */
+  --primary-foreground: 0 0% 100%;
+  
+  /* Secondary: Warm peach - friendly, approachable */
+  --secondary: 24 100% 97%;         /* Very light peach */
+  --secondary-foreground: 240 10% 15%;
+  --muted: 210 20% 96%;             /* Cool light gray */
+  --muted-foreground: 215 16% 47%;  /* Medium slate gray */
+  
+  /* Accent: Golden amber - premium, appetizing, warm */
+  --accent: 43 96% 56%;             /* Rich golden #fbbf24 */
+  --accent-foreground: 240 10% 15%;
+  
+  --destructive: 0 84% 60%;         /* Vibrant red for errors */
+  --destructive-foreground: 0 0% 100%;
+  
+  /* Borders - soft and modern */
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 14 90% 53%;
+  --radius: 0.75rem;
+  
+  /* Additional semantic colors */
+  --success: 142 76% 45%;           /* Fresh green for success */
+  --warning: 38 92% 50%;            /* Warm amber for warnings */
+  --info: 211 96% 48%;              /* Bright blue for info */
 }
 
+/* Dark mode - sophisticated, modern, maintains appetite appeal */
+.dark {
+  --background: 222 47% 11%;        /* Deep navy-charcoal - premium feel */
+  --foreground: 210 20% 98%;        /* Soft white - easy on eyes */
+  --card: 222 47% 14%;              /* Slightly lighter than bg */
+  --card-foreground: 210 20% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 20% 98%;
+  
+  /* Primary: Bright coral - pops in dark mode, maintains energy */
+  --primary: 14 90% 58%;            /* Slightly brighter for dark bg */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 222 47% 18%;         /* Dark slate */
+  --secondary-foreground: 210 20% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 43 96% 65%;             /* Bright amber in dark */
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 217 33% 22%;
+  --input: 217 33% 22%;
+  --ring: 14 90% 58%;
+}
 
+/* ===== Brand color themes (override primary/accent/ring) ===== */
+/* Default (Moringa) uses :root values; other themes override below */
+
+.theme-moringa {
+  --primary: 14 90% 53%;
+  --accent: 43 96% 56%;
+  --ring: 14 90% 53%;
+}
+
+.theme-moringa.dark {
+  --primary: 14 90% 58%;
+  --accent: 43 96% 65%;
+  --ring: 14 90% 58%;
+}
+
+.theme-emerald {
+  /* Primary emerald and fresh green accents */
+  --primary: 160 84% 39%; /* #10b981 */
+  --accent: 142 71% 45%;  /* #22c55e */
+  --ring: 160 84% 39%;
+}
+
+.theme-emerald.dark {
+  --primary: 160 84% 45%;
+  --accent: 142 71% 50%;
+  --ring: 160 84% 45%;
+}
+
+.theme-rose {
+  --primary: 346 77% 55%; /* #f43f5e */
+  --accent: 0 84% 60%;    /* #ef4444 */
+  --ring: 346 77% 55%;
+}
+
+.theme-rose.dark {
+  --primary: 346 77% 60%;
+  --accent: 0 84% 65%;
+  --ring: 346 77% 60%;
+}
+
+.theme-violet {
+  --primary: 258 90% 66%; /* #8b5cf6 */
+  --accent: 262 83% 58%;  /* #7c3aed */
+  --ring: 258 90% 66%;
+}
+
+.theme-violet.dark {
+  --primary: 258 90% 70%;
+  --accent: 262 83% 65%;
+  --ring: 258 90% 70%;
+}
+
+.theme-sky {
+  --primary: 199 95% 50%; /* #0ea5e9 */
+  --accent: 201 94% 46%;  /* #0284c7 */
+  --ring: 199 95% 50%;
+}
+
+.theme-sky.dark {
+  --primary: 199 95% 55%;
+  --accent: 201 94% 52%;
+  --ring: 199 95% 55%;
+}
+
+.theme-amber {
+  --primary: 45 93% 47%;  /* #f59e0b */
+  --accent: 43 96% 56%;   /* #fbbf24 */
+  --ring: 45 93% 47%;
+}
+
+.theme-amber.dark {
+  --primary: 45 93% 55%;
+  --accent: 43 96% 62%;
+  --ring: 45 93% 55%;
+}
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142 86% 28%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 64%;
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 75% 60%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 142 86% 28%;
+  :root:not(.light) {
+    --background: 222 47% 11%;
+    --foreground: 210 20% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 20% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 14 90% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 47% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 43 96% 65%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 14 90% 58%;
   }
 }
 
@@ -56,16 +173,59 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Utilities to consume CSS variables easily */
+/* ===== Utility shortcuts for CSS variable-driven colors ===== */
 .text-primary { color: hsl(var(--primary)); }
 .bg-primary { background-color: hsl(var(--primary)); }
-.text-primary-foreground { color: hsl(var(--primary-foreground)); }
-.bg-accent { background-color: hsl(var(--accent)); }
-.text-accent-foreground { color: hsl(var(--accent-foreground)); }
 .bg-primary-soft { background-color: hsl(var(--primary) / 0.12); }
-.bg-primary-softer { background-color: hsl(var(--primary) / 0.06); }
+.border-primary { border-color: hsl(var(--primary)); }
+
+/* Semantic status colors */
+.text-success { color: hsl(var(--success)); }
+.bg-success { background-color: hsl(var(--success)); }
+.bg-success-soft { background-color: hsl(var(--success) / 0.12); }
+
+.text-warning { color: hsl(var(--warning)); }
+.bg-warning { background-color: hsl(var(--warning)); }
+.bg-warning-soft { background-color: hsl(var(--warning) / 0.12); }
+
+.text-destructive { color: hsl(var(--destructive)); }
+.bg-destructive { background-color: hsl(var(--destructive)); }
+.bg-destructive-soft { background-color: hsl(var(--destructive) / 0.12); }
+
+.text-info { color: hsl(var(--info)); }
+.bg-info { background-color: hsl(var(--info)); }
+.bg-info-soft { background-color: hsl(var(--info) / 0.12); }
+
+/* ===== Color Blind Friendly Mode ===== */
+html.color-blind {
+  /* Use color pairings commonly distinguishable: blue/orange */
+  --primary: 208 80% 45%; /* #1d4ed8-ish (blue) */
+  --accent: 28 90% 55%;   /* #f59e0b-ish (orange) */
+  --success: 192 91% 36%; /* teal (more distinguishable than green) */
+  --warning: 28 90% 55%;  /* align with accent/orange */
+  --destructive: 0 84% 60%;
+  --ring: 208 80% 45%;
+}
+
+/* Add extra cues beyond color only when color-blind mode is on */
+html.color-blind a,
+html.color-blind button.link,
+html.color-blind .is-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Optional: dashed outlines for status badges to reinforce meaning */
+html.color-blind .badge-success { outline: 2px dashed hsl(var(--success)); outline-offset: 2px; }
+html.color-blind .badge-warning { outline: 2px dashed hsl(var(--warning)); outline-offset: 2px; }
+html.color-blind .badge-danger { outline: 2px dashed hsl(var(--destructive)); outline-offset: 2px; }
+
+/* Utilities to consume CSS variables easily - Tailwind will use these through config */
 
 /* Form controls improved readability */
 input, textarea, select {
@@ -74,6 +234,22 @@ input, textarea, select {
 
 input::placeholder, textarea::placeholder {
   color: hsl(var(--muted-foreground));
+}
+
+/* Base theming for native selects and options (ensures visibility in dark/light) */
+select {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius);
+}
+select:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+option {
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
 }
 
 /* Improve WebKit autofill contrast */
@@ -118,12 +294,68 @@ select:-webkit-autofill:focus {
   }
 }
 
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;
 }
 
 .animate-slideUp {
   animation: slideUp 0.3s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Smooth hover transitions */
+.transition-all-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Skeleton loading shimmer effect */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted) / 0.8) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 /* Hide scrollbar but keep scrolling */
@@ -143,4 +375,151 @@ select:-webkit-autofill:focus {
   line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ===== Accessibility Features ===== */
+
+/* Font Size Options */
+html.font-small {
+  font-size: 14px;
+}
+
+html.font-normal {
+  font-size: 16px;
+}
+
+html.font-large {
+  font-size: 18px;
+}
+
+html.font-extra-large {
+  font-size: 20px;
+}
+
+/* High Contrast Mode */
+html.high-contrast {
+  --foreground: 0 0% 5%;
+  --background: 0 0% 100%;
+  --border: 0 0% 20%;
+  --primary: 145 45% 40%;
+  --primary-foreground: 0 0% 100%;
+}
+
+html.high-contrast.dark {
+  --foreground: 0 0% 98%;
+  --background: 0 0% 8%;
+  --border: 0 0% 80%;
+  --primary: 145 40% 55%;
+  --primary-foreground: 0 0% 5%;
+}
+
+html.high-contrast * {
+  border-width: max(1px, 0.125rem) !important;
+}
+
+html.high-contrast button,
+html.high-contrast a,
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast textarea {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+html.high-contrast button:focus,
+html.high-contrast a:focus,
+html.high-contrast input:focus,
+html.high-contrast select:focus,
+html.high-contrast textarea:focus {
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible styles for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Improve button focus in dark mode */
+.dark button:focus-visible,
+.dark a:focus-visible {
+  outline-color: hsl(var(--primary));
+}
+
+/* Mobile Responsive Utilities */
+@media (max-width: 640px) {
+  /* Improve touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+
+  /* Better spacing on mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Improve table readability */
+  table {
+    font-size: 0.875rem;
+  }
+
+  /* Stack form inputs */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Improve modal sizing */
+  .modal-content {
+    max-height: 90vh;
+    margin: 1rem;
+  }
+
+  /* Better card spacing */
+  .card-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Prevent zoom on input focus (iOS) */
+@supports (-webkit-touch-callout: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }

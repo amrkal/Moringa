@@ -12,18 +12,15 @@ import { Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
+import { getLocalizedText } from '@/lib/i18n';
+
+type Translation = { en?: string; ar?: string; he?: string };
 
 interface MealDetailsDialogProps {
   meal: {
     id: string;
-    name: string;
-    name_en?: string;
-    name_ar?: string;
-    name_he?: string;
-    description: string;
-    description_en?: string;
-    description_ar?: string;
-    description_he?: string;
+    name?: Translation | string;
+    description?: Translation | string;
     price: number;
     image: string;
     ingredients: Array<{
@@ -32,15 +29,9 @@ interface MealDetailsDialogProps {
       isDefault: boolean;
       ingredient: {
         id: string;
-        name: string;
-        name_en?: string;
-        name_ar?: string;
-        name_he?: string;
+        name?: Translation | string;
         price: number;
-        description?: string;
-        description_en?: string;
-        description_ar?: string;
-        description_he?: string;
+        description?: Translation | string;
       };
     }>;
   } | null;
@@ -54,7 +45,7 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const addItem = useCartStore((state) => state.addItem);
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
 
   // Initialize selected ingredients when meal changes
   React.useEffect(() => {
@@ -94,17 +85,61 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
       .map((id) => meal.ingredients.find((mi) => mi.ingredient.id === id))
       .filter((mi): mi is NonNullable<typeof mi> => Boolean(mi))
       .filter((mi) => !mi.isDefault) // only extras are billable
-      .map((mi) => ({ id: mi.ingredient.id, name: mi.ingredient.name, price: mi.ingredient.price || 0 }));
+      .map((mi) => ({
+        id: mi.ingredient.id,
+        name: getLocalizedText(
+          typeof mi.ingredient.name === 'string'
+            ? { en: mi.ingredient.name, ar: '', he: '' }
+            : { en: mi.ingredient.name?.en ?? '', ar: mi.ingredient.name?.ar ?? '', he: mi.ingredient.name?.he ?? '' },
+          language
+        ),
+        price: mi.ingredient.price || 0,
+      }));
+
+    // Track removed default ingredients
+    const defaultIngredientIds = meal.ingredients
+      .filter((mi) => mi.isDefault)
+      .map((mi) => mi.ingredient.id);
+    const removedDefaults = defaultIngredientIds.filter((id) => !selectedIngredients.includes(id));
+    const removedDefaultsDetailed = removedDefaults
+      .map((id) => meal.ingredients.find((mi) => mi.ingredient.id === id))
+      .filter((mi): mi is NonNullable<typeof mi> => Boolean(mi))
+      .map((mi) => ({
+        id: mi.ingredient.id,
+        name: getLocalizedText(
+          typeof mi.ingredient.name === 'string'
+            ? { en: mi.ingredient.name, ar: '', he: '' }
+            : { en: mi.ingredient.name?.en ?? '', ar: mi.ingredient.name?.ar ?? '', he: mi.ingredient.name?.he ?? '' },
+          language
+        ),
+        price: 0,
+      }));
+
+    // Extract English name as string for cart (API requires meal_name as string)
+    const mealNameEn = typeof meal.name === 'string' 
+      ? meal.name 
+      : (meal.name?.en || meal.name?.ar || meal.name?.he || '');
 
     addItem({
       mealId: meal.id,
-      meal: { id: meal.id, name: meal.name, price: meal.price },
+      meal: {
+        id: meal.id,
+        name: mealNameEn,
+        price: meal.price,
+      },
       quantity,
       selectedIngredients: extras,
+  removedIngredients: removedDefaultsDetailed.length > 0 ? removedDefaultsDetailed : undefined,
       specialInstructions,
     });
 
-    toast.success(`${meal.name} added to cart!`);
+    const localizedName = getLocalizedText(
+      typeof meal.name === 'string'
+        ? { en: meal.name, ar: '', he: '' }
+        : { en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' },
+      language
+    );
+    toast.success(`${localizedName} added to cart!`);
     onOpenChange(false);
     
     // Reset form
@@ -121,16 +156,26 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">
-            {t(meal.name, { en: meal.name_en, ar: meal.name_ar, he: meal.name_he })}
+            {getLocalizedText(
+              typeof meal.name === 'string'
+                ? { en: meal.name, ar: '', he: '' }
+                : { en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' },
+              language
+            )}
           </DialogTitle>
           <DialogDescription>
-            {t(meal.description, { en: meal.description_en, ar: meal.description_ar, he: meal.description_he })}
+            {getLocalizedText(
+              typeof meal.description === 'string'
+                ? { en: meal.description, ar: '', he: '' }
+                : { en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' },
+              language
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Meal Image */}
-          <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
+          <div className="aspect-video bg-[hsl(var(--muted))] rounded-lg overflow-hidden">
             <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
               <span className="text-6xl">🍽️</span>
             </div>
@@ -148,7 +193,7 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
                     return (
                       <div
                         key={`def-${ingredient.id}`}
-                        className="flex items-center justify-between p-3 border rounded-lg bg-gray-50"
+                        className="flex items-center justify-between p-3 border rounded-lg bg-[hsl(var(--muted))]"
                       >
                         <div className="flex items-center space-x-3">
                           <input
@@ -156,23 +201,33 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
                             checked={isSelected}
                             disabled={!mi.isOptional}
                             onChange={() => toggleIngredient(ingredient.id, mi.isOptional)}
-                            className="rounded border-gray-300 disabled:opacity-50"
+                            className="rounded border-[hsl(var(--input))] disabled:opacity-50"
                           />
                           <div>
                             <p className="font-medium">
-                              {t(ingredient.name, { en: ingredient.name_en, ar: ingredient.name_ar, he: ingredient.name_he })}
+                              {getLocalizedText(
+                                typeof ingredient.name === 'string'
+                                  ? { en: ingredient.name, ar: '', he: '' }
+                                  : { en: ingredient.name?.en ?? '', ar: ingredient.name?.ar ?? '', he: ingredient.name?.he ?? '' },
+                                language
+                              )}
                             </p>
                             {ingredient.description && (
-                              <p className="text-sm text-gray-500">
-                                {t(ingredient.description, { en: ingredient.description_en, ar: ingredient.description_ar, he: ingredient.description_he })}
+                              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                                {getLocalizedText(
+                                  typeof ingredient.description === 'string'
+                                    ? { en: ingredient.description, ar: '', he: '' }
+                                    : { en: ingredient.description?.en ?? '', ar: ingredient.description?.ar ?? '', he: ingredient.description?.he ?? '' },
+                                  language
+                                )}
                               </p>
                             )}
                             {!mi.isOptional && (
-                              <span className="text-xs text-green-600">{getTranslation('common', 'required', language)}</span>
+                              <span className="text-xs text-success">{getTranslation('common', 'required', language)}</span>
                             )}
                           </div>
                         </div>
-                        <span className="text-xs text-gray-500">{getTranslation('common', 'included', language)}</span>
+                        <span className="text-xs text-[hsl(var(--muted-foreground))]">{getTranslation('common', 'included', language)}</span>
                       </div>
                     );
                   })}
@@ -188,7 +243,7 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
                     return (
                       <div
                         key={`extra-${ingredient.id}`}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-[hsl(var(--muted))]"
                         onClick={() => toggleIngredient(ingredient.id, true)}
                       >
                         <div className="flex items-center space-x-3">
@@ -196,22 +251,32 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleIngredient(ingredient.id, true)}
-                            className="rounded border-gray-300"
+                            className="rounded border-[hsl(var(--input))]"
                           />
                           <div>
                             <p className="font-medium">
-                              {t(ingredient.name, { en: ingredient.name_en, ar: ingredient.name_ar, he: ingredient.name_he })}
+                              {getLocalizedText(
+                                typeof ingredient.name === 'string'
+                                  ? { en: ingredient.name, ar: '', he: '' }
+                                  : { en: ingredient.name?.en ?? '', ar: ingredient.name?.ar ?? '', he: ingredient.name?.he ?? '' },
+                                language
+                              )}
                             </p>
                             {ingredient.description && (
-                              <p className="text-sm text-gray-500">
-                                {t(ingredient.description, { en: ingredient.description_en, ar: ingredient.description_ar, he: ingredient.description_he })}
+                              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                                {getLocalizedText(
+                                  typeof ingredient.description === 'string'
+                                    ? { en: ingredient.description, ar: '', he: '' }
+                                    : { en: ingredient.description?.en ?? '', ar: ingredient.description?.ar ?? '', he: ingredient.description?.he ?? '' },
+                                  language
+                                )}
                               </p>
                             )}
                           </div>
                         </div>
                         {ingredient.price > 0 && (
-                          <span className="font-medium text-green-600">
-                            +{formatPrice(ingredient.price)}
+                          <span className="font-medium text-success">
+                            +{formatPrice(ingredient.price, language)}
                           </span>
                         )}
                       </div>
@@ -265,9 +330,9 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500 mb-1">{getTranslation('common', 'total', language)}</p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatPrice(calculateTotal())}
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">{getTranslation('common', 'total', language)}</p>
+              <p className="text-2xl font-bold text-success">
+                {formatPrice(calculateTotal(), language)}
               </p>
             </div>
           </div>
@@ -278,7 +343,7 @@ export function MealDetailsDialog({ meal, open, onOpenChange }: MealDetailsDialo
             Cancel
           </Button>
           <Button onClick={handleAddToCart}>
-            {getTranslation('common', 'addToCart', language)} - {formatPrice(calculateTotal())}
+            {getTranslation('common', 'addToCart', language)} - {formatPrice(calculateTotal(), language)}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -16,6 +16,7 @@ export type CartItem = {
   meal: CartMeal;
   quantity: number;
   selectedIngredients: SelectedIngredient[]; // extras only
+  removedIngredients?: SelectedIngredient[]; // Default ingredients that were removed
   specialInstructions?: string;
   totalPrice: number;
 };

@@ -12,6 +12,10 @@ import {
   Eye
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getTranslation } from '@/lib/translations';
+import { formatCurrency } from '@/lib/format';
+import { getLocalizedText } from '@/lib/i18n';
 
 interface DashboardStats {
   totalOrders: number;
@@ -24,6 +28,7 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { language } = useLanguage();
   const [stats, setStats] = useState<DashboardStats>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -44,23 +49,67 @@ export default function AdminDashboard() {
       setLoading(true);
       
       // Fetch all data in parallel
-      const [ordersRes, usersRes, mealsRes, categoriesRes] = await Promise.all([
+      const [ordersRes, usersRes, mealsRes] = await Promise.all([
         api.get('/orders'),
         api.get('/users'),
-        api.get('/meals'),
-        api.get('/categories')
+        api.get('/meals?active_only=false')
       ]);
 
-      const orders = ordersRes.data.items || ordersRes.data;
-      const users = usersRes.data.items || usersRes.data;
-      const meals = mealsRes.data.items || mealsRes.data;
+      const orders = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.items || ordersRes.data || [];
+      const users = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.items || usersRes.data || [];
+      const meals = Array.isArray(mealsRes.data) ? mealsRes.data : mealsRes.data.items || mealsRes.data || [];
 
       // Calculate stats
-      const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0);
-      const recentOrders = orders.slice(0, 5);
+      const totalRevenue = orders.reduce((sum: number, order: any) => {
+        const amount = order.total_amount || order.total || 0;
+        return sum + amount;
+      }, 0);
       
-      // Calculate popular meals (mock data for now)
-      const popularMeals = meals.slice(0, 5);
+      // Sort orders by date and get recent ones
+      const sortedOrders = orders.sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      const recentOrders = sortedOrders.slice(0, 5);
+      
+      // Calculate popular meals based on order frequency
+      const mealCounts: Record<string, { meal: any; count: number; revenue: number }> = {};
+      orders.forEach((order: any) => {
+        (order.items || []).forEach((item: any) => {
+          const mealId = item.meal_id || item.mealId;
+          if (!mealId) return;
+          
+          if (!mealCounts[mealId]) {
+            const meal = meals.find((m: any) => (m.id || m._id) === mealId);
+            mealCounts[mealId] = { meal: meal || { name: 'Unknown', price: 0 }, count: 0, revenue: 0 };
+          }
+          mealCounts[mealId].count += item.quantity || 1;
+          mealCounts[mealId].revenue += (item.price || 0) * (item.quantity || 1);
+        });
+      });
+      
+      const popularMeals = Object.values(mealCounts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+        .map(({ meal, count, revenue }) => ({
+          ...meal,
+          orderCount: count,
+          totalRevenue: revenue,
+          available: meal.is_active ?? meal.is_available ?? true
+        }));
+
+      // Calculate monthly revenue (last 12 months)
+      const now = new Date();
+      const monthlyRevenue = Array(12).fill(0);
+      orders.forEach((order: any) => {
+        const orderDate = new Date(order.created_at || order.createdAt);
+        const monthDiff = (now.getFullYear() - orderDate.getFullYear()) * 12 + (now.getMonth() - orderDate.getMonth());
+        if (monthDiff >= 0 && monthDiff < 12) {
+          const index = 11 - monthDiff;
+          monthlyRevenue[index] += order.total_amount || order.total || 0;
+        }
+      });
 
       setStats({
         totalOrders: orders.length,
@@ -69,7 +118,7 @@ export default function AdminDashboard() {
         totalMeals: meals.length,
         recentOrders,
         popularMeals,
-        monthlyRevenue: [12000, 15000, 18000, 22000, 19000, 25000, 28000, 30000, 27000, 32000, 29000, 35000]
+        monthlyRevenue
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -80,9 +129,9 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayout title="Dashboard">
+      <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
     );
@@ -90,61 +139,61 @@ export default function AdminDashboard() {
 
   const statCards = [
     {
-      title: 'Total Orders',
+      title: getTranslation('admin', 'totalOrders', language),
       value: stats.totalOrders,
       icon: ShoppingBag,
       change: '+12%',
       changeType: 'positive' as const,
-      color: 'bg-blue-500'
+      color: 'bg-info'
     },
     {
-      title: 'Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      title: getTranslation('admin', 'revenue', language),
+      value: formatCurrency(stats.totalRevenue, language, 'ILS'),
       icon: DollarSign,
       change: '+18%',
       changeType: 'positive' as const,
-      color: 'bg-green-500'
+      color: 'bg-success'
     },
     {
-      title: 'Total Users',
+      title: getTranslation('admin', 'totalUsers', language),
       value: stats.totalUsers,
       icon: Users,
       change: '+8%',
       changeType: 'positive' as const,
-      color: 'bg-purple-500'
+      color: 'bg-primary'
     },
     {
-      title: 'Total Meals',
+      title: getTranslation('admin', 'totalMeals', language),
       value: stats.totalMeals,
       icon: Package,
       change: '+3%',
       changeType: 'positive' as const,
-      color: 'bg-orange-500'
+      color: 'bg-primary'
     }
   ];
 
   return (
-    <AdminLayout title="Dashboard">
-      <div className="space-y-6">
+    <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
+      <div className="space-y-6" dir="ltr">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
+            <div key={index} className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className={`${stat.color} p-2 rounded-lg`}>
-                  <stat.icon className="h-6 w-6 text-white" />
+                  <stat.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                  <p className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{stat.title}</p>
+                  <p className="text-2xl font-semibold text-[hsl(var(--foreground))]">{stat.value}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-center">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <span className="ml-1 text-sm text-green-500 font-medium">
+                <TrendingUp className="h-4 w-4 text-success" />
+                <span className="ml-1 text-sm text-success font-medium">
                   {stat.change}
                 </span>
-                <span className="ml-1 text-sm text-gray-500">from last month</span>
+                <span className="ml-1 text-sm text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'fromLastMonth', language)}</span>
               </div>
             </div>
           ))}
@@ -153,18 +202,18 @@ export default function AdminDashboard() {
         {/* Charts and Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Chart */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Revenue</h3>
+          <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">{getTranslation('admin', 'monthlyRevenue', language)}</h3>
             <div className="h-64 flex items-end justify-between space-x-2">
               {stats.monthlyRevenue.map((revenue, index) => (
                 <div key={index} className="flex flex-col items-center">
                   <div
-                    className="w-6 bg-orange-500 rounded-t"
+                    className="w-6 bg-primary rounded-t"
                     style={{
                       height: `${(revenue / Math.max(...stats.monthlyRevenue)) * 200}px`
                     }}
                   />
-                  <span className="text-xs text-gray-500 mt-1">
+                  <span className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
                     {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index]}
                   </span>
                 </div>
@@ -173,110 +222,133 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Orders */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
-              <button className="text-orange-600 hover:text-orange-700 text-sm font-medium">
-                View all
+              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">{getTranslation('admin', 'recentOrders', language)}</h3>
+              <button className="text-primary hover:opacity-90 text-sm font-medium is-link">
+                {getTranslation('admin', 'viewAll', language)}
               </button>
             </div>
             <div className="space-y-3">
               {stats.recentOrders.length > 0 ? (
                 stats.recentOrders.map((order, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <div key={index} className="flex items-center justify-between py-2 border-b border-[hsl(var(--border))]">
                     <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center">
                         <span className="text-xs font-medium">
                           #{order.id?.toString().slice(-4) || `000${index}`}
                         </span>
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-[hsl(var(--foreground))]">
                           Order #{order.id?.toString().slice(-6) || `00000${index}`}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {order.customer_name || 'Guest User'}
+                        <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                          {order.customer_name || getTranslation('admin', 'guestUser', language)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
-                        ${order.total_amount?.toFixed(2) || '0.00'}
+                      <p className="text-sm font-medium text-[hsl(var(--foreground))]">
+                        {formatCurrency(order.total_amount || order.total || 0, language, 'ILS')}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        order.status === 'COMPLETED' ? 'bg-success-soft text-success' :
+                        order.status === 'PREPARING' ? 'bg-info-soft text-info' :
+                        order.status === 'CANCELLED' ? 'bg-destructive-soft text-destructive' :
+                        'bg-warning-soft text-warning'
+                      }`}>
                         {order.status || 'PENDING'}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 text-center py-4">No recent orders</p>
+                <p className="text-[hsl(var(--muted-foreground))] text-center py-4">{getTranslation('admin', 'noRecentOrders', language)}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Popular Meals */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-[hsl(var(--card))] rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-[hsl(var(--border))]">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Popular Meals</h3>
-              <button className="text-orange-600 hover:text-orange-700 text-sm font-medium">
-                View all
+              <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">{getTranslation('admin', 'popularMeals', language)}</h3>
+              <button className="text-primary hover:opacity-90 text-sm font-medium is-link">
+                {getTranslation('admin', 'viewAll', language)}
               </button>
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Meal
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {getTranslation('admin', 'mealColumn', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {getTranslation('admin', 'categoryColumn', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {getTranslation('admin', 'priceColumn', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {getTranslation('admin', 'status', language)}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {getTranslation('admin', 'actions', language)}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {stats.popularMeals.length > 0 ? (
                   stats.popularMeals.map((meal, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                            <Package className="h-5 w-5 text-gray-400" />
+                          <div className="h-10 w-10 rounded-lg bg-[hsl(var(--muted))] flex items-center justify-center">
+                            <Package className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{meal.name}</div>
-                            <div className="text-sm text-gray-500">{meal.description?.slice(0, 50)}...</div>
+                            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+                              {typeof meal.name === 'string' 
+                                ? meal.name 
+                                : getLocalizedText(
+                                    { en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' },
+                                    language
+                                  )
+                              }
+                            </div>
+                            <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                              {(() => {
+                                const desc = typeof meal.description === 'string'
+                                  ? meal.description
+                                  : getLocalizedText(
+                                      { en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' },
+                                      language
+                                    );
+                                return desc ? `${desc.slice(0, 50)}...` : '';
+                              })()}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {meal.category || 'Uncategorized'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                        {meal.category || getTranslation('admin', 'uncategorized', language)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${meal.price?.toFixed(2) || '0.00'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
+                        {formatCurrency(meal.price || 0, language, 'ILS')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          meal.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          meal.available ? 'bg-success-soft text-success' : 'bg-destructive-soft text-destructive'
                         }`}>
-                          {meal.available ? 'Available' : 'Unavailable'}
+                          {meal.available ? getTranslation('admin', 'available', language) : getTranslation('admin', 'unavailable', language)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-orange-600 hover:text-orange-700">
+                        <button className="text-primary hover:opacity-90 is-link">
                           <Eye className="h-4 w-4" />
                         </button>
                       </td>
@@ -284,8 +356,8 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      No meals found
+                    <td colSpan={5} className="px-6 py-4 text-center text-[hsl(var(--muted-foreground))]">
+                      {getTranslation('admin', 'noMealsFound', language)}
                     </td>
                   </tr>
                 )}
@@ -295,24 +367,24 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="bg-[hsl(var(--card))] rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">{getTranslation('admin', 'quickActions', language)}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
-              <Package className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Add Meal</span>
+            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
+              <Package className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardAddMeal', language)}</span>
             </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
-              <Users className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Manage Users</span>
+            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
+              <Users className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardManageUsers', language)}</span>
             </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
-              <ShoppingBag className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm font-medium text-gray-900">View Orders</span>
+            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
+              <ShoppingBag className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'dashboardViewOrders', language)}</span>
             </button>
-            <button className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
-              <Clock className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm font-medium text-gray-900">Settings</span>
+            <button className="flex flex-col items-center p-4 border-2 border-dashed border-[hsl(var(--input))] rounded-lg hover:border-primary hover:bg-primary-soft transition-colors">
+              <Clock className="h-8 w-8 text-[hsl(var(--muted-foreground))] mb-2" />
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">{getTranslation('admin', 'settings', language)}</span>
             </button>
           </div>
         </div>

@@ -1,14 +1,18 @@
  'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, X } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getTranslation } from '@/lib/translations';
+import { formatCurrency } from '@/lib/format';
+import { getLocalizedText } from '@/lib/i18n';
 
 interface Category {
   id: string;
-  name: string;
+  name: string | { en?: string; ar?: string; he?: string };
 }
 
 interface MealIngredientLink {
@@ -19,11 +23,11 @@ interface MealIngredientLink {
 
 interface Meal {
   id: string;
-  name: string;
+  name: string | { en?: string; ar?: string; he?: string };
   name_en?: string;
   name_ar?: string;
   name_he?: string;
-  description: string;
+  description: string | { en?: string; ar?: string; he?: string };
   description_en?: string;
   description_ar?: string;
   description_he?: string;
@@ -37,14 +41,18 @@ interface Meal {
 
 interface Ingredient {
   id: string;
-  name: string;
+  name: string | { en?: string; ar?: string; he?: string };
   price: number;
   is_active: boolean;
 }
 
 export default function MealsPage() {
+  const { language } = useLanguage();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name'|'price'|'created_at'|'status'>('name');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
   const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
   const [ingredientSearch, setIngredientSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,7 +87,7 @@ export default function MealsPage() {
       const response = await api.get('/meals?active_only=false');
       setMeals(response.data);
     } catch (error) {
-      toast.error('Failed to fetch meals');
+      toast.error(getTranslation('admin', 'failedFetchMeals', language));
       console.error(error);
     } finally {
       setLoading(false);
@@ -91,7 +99,7 @@ export default function MealsPage() {
       const response = await api.get('/categories?active_only=false');
       setCategories(response.data);
     } catch (error) {
-      toast.error('Failed to fetch categories');
+      toast.error(getTranslation('admin', 'failedFetchCategories', language));
       console.error(error);
     }
   };
@@ -101,7 +109,7 @@ export default function MealsPage() {
       const response = await api.get('/ingredients?active_only=true');
       setAllIngredients(response.data);
     } catch (error) {
-      toast.error('Failed to fetch ingredients');
+      toast.error(getTranslation('admin', 'failedFetchIngredients', language));
       console.error(error);
     }
   };
@@ -109,6 +117,7 @@ export default function MealsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+
     // Build ingredients array from selection state
     const ingredients = Object.entries(ingredientSelection)
       .filter(([_, config]) => config.mode !== 'none')
@@ -118,9 +127,18 @@ export default function MealsPage() {
         is_optional: config.mode === 'default' ? config.removable : true
       }));
 
+    // Map name and description to objects as required by backend
     const mealData = {
-      name: formData.name,
-      description: formData.description,
+      name: {
+        en: formData.name,
+        ar: formData.name_ar || '',
+        he: formData.name_he || ''
+      },
+      description: {
+        en: formData.description,
+        ar: formData.description_ar || '',
+        he: formData.description_he || ''
+      },
       price: parseFloat(formData.price),
       image: formData.image,
       category_id: formData.category_id,
@@ -131,28 +149,28 @@ export default function MealsPage() {
     try {
       if (editingMeal) {
         await api.put(`/meals/${editingMeal.id}`, mealData);
-        toast.success('Meal updated successfully');
+        toast.success(getTranslation('admin', 'mealUpdated', language));
       } else {
         await api.post('/meals', mealData);
-        toast.success('Meal created successfully');
+        toast.success(getTranslation('admin', 'mealCreated', language));
       }
       fetchMeals();
       closeModal();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to save meal');
+      toast.error(error.response?.data?.detail || getTranslation('admin', 'failedSaveMeal', language));
       console.error(error);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this meal?')) return;
+    if (!confirm(getTranslation('admin', 'confirmDeleteMeal', language))) return;
 
     try {
       await api.delete(`/meals/${id}`);
-      toast.success('Meal deleted successfully');
+      toast.success(getTranslation('admin', 'mealDeleted', language));
       fetchMeals();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to delete meal');
+      toast.error(error.response?.data?.detail || getTranslation('admin', 'failedDeleteMeal', language));
       console.error(error);
     }
   };
@@ -160,10 +178,14 @@ export default function MealsPage() {
   const toggleActive = async (meal: Meal) => {
     try {
       await api.put(`/meals/${meal.id}`, { is_active: !meal.is_active });
-      toast.success(`Meal ${!meal.is_active ? 'activated' : 'deactivated'} successfully`);
+      toast.success(
+        !meal.is_active
+          ? getTranslation('admin', 'mealActivated', language)
+          : getTranslation('admin', 'mealDeactivated', language)
+      );
       fetchMeals();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to update meal');
+      toast.error(error.response?.data?.detail || getTranslation('admin', 'failedUpdateMeal', language));
       console.error(error);
     }
   };
@@ -171,15 +193,21 @@ export default function MealsPage() {
   const openModal = (meal?: Meal) => {
     if (meal) {
       setEditingMeal(meal);
+      const name = typeof meal.name === 'string' 
+        ? meal.name 
+        : getLocalizedText({ en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' }, language);
+      const description = typeof meal.description === 'string'
+        ? meal.description
+        : getLocalizedText({ en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' }, language);
       setFormData({
-        name: meal.name,
-        name_en: meal.name_en || '',
-        name_ar: meal.name_ar || '',
-        name_he: meal.name_he || '',
-        description: meal.description,
-        description_en: meal.description_en || '',
-        description_ar: meal.description_ar || '',
-        description_he: meal.description_he || '',
+        name,
+        name_en: meal.name_en || (typeof meal.name === 'object' ? meal.name?.en : '') || '',
+        name_ar: meal.name_ar || (typeof meal.name === 'object' ? meal.name?.ar : '') || '',
+        name_he: meal.name_he || (typeof meal.name === 'object' ? meal.name?.he : '') || '',
+        description,
+        description_en: meal.description_en || (typeof meal.description === 'object' ? meal.description?.en : '') || '',
+        description_ar: meal.description_ar || (typeof meal.description === 'object' ? meal.description?.ar : '') || '',
+        description_he: meal.description_he || (typeof meal.description === 'object' ? meal.description?.he : '') || '',
         price: meal.price.toString(),
         image: meal.image,
         category_id: meal.category_id,
@@ -259,88 +287,169 @@ export default function MealsPage() {
     });
   };
 
-  const filteredIngredients = allIngredients.filter(ing =>
-    ing.name.toLowerCase().includes(ingredientSearch.toLowerCase())
-  );
+  const filteredIngredients = allIngredients.filter(ing => {
+    const name = typeof ing.name === 'string' 
+      ? ing.name 
+      : getLocalizedText({ en: ing.name?.en ?? '', ar: ing.name?.ar ?? '', he: ing.name?.he ?? '' }, language);
+    return name.toLowerCase().includes(ingredientSearch.toLowerCase());
+  });
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
-    return category ? category.name : 'Unknown';
+    if (!category) return getTranslation('admin', 'unknown', language);
+    return typeof category.name === 'string' 
+      ? category.name 
+      : getLocalizedText({ en: category.name?.en ?? '', ar: category.name?.ar ?? '', he: category.name?.he ?? '' }, language);
   };
 
   if (loading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading...</div>
+          <div className="text-lg">{getTranslation('admin', 'loading', language)}</div>
         </div>
       </AdminLayout>
     );
   }
 
+  // Derived list with client-side filter + sort for now
+  const displayedMeals = [...meals]
+    .filter((m) => selectedCategory === 'all' || m.category_id === selectedCategory)
+    .sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortBy === 'name') {
+        const an = typeof a.name === 'string' ? a.name : (a.name?.en || a.name_en || '');
+        const bn = typeof b.name === 'string' ? b.name : (b.name?.en || b.name_en || '');
+        return an.localeCompare(bn) * dir;
+      }
+      if (sortBy === 'price') {
+        return (a.price - b.price) * dir;
+      }
+      if (sortBy === 'created_at') {
+        const at = a.created_at ? Date.parse(a.created_at) : 0;
+        const bt = b.created_at ? Date.parse(b.created_at) : 0;
+        return (at - bt) * dir;
+      }
+      if (sortBy === 'status') {
+        // active first when asc; inactive first when desc
+        const av = a.is_active ? 1 : 0;
+        const bv = b.is_active ? 1 : 0;
+        return (av - bv) * dir;
+      }
+      return 0;
+    });
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Meals Management</h1>
+          <h1 className="text-3xl font-bold">{getTranslation('admin', 'mealsManagement', language)}</h1>
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             <Plus size={20} />
-            Add Meal
+            {getTranslation('admin', 'addMeal', language)}
           </button>
         </div>
+        {/* Filters and sorting */}
+        <div className="flex flex-wrap gap-3 items-center bg-card p-4 rounded-lg border border-border">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground">Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-border rounded-md bg-card text-foreground"
+            >
+              <option value="all">All</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {typeof c.name === 'string' ? c.name : getLocalizedText({ en: c.name?.en ?? '', ar: c.name?.ar ?? '', he: c.name?.he ?? '' }, language)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground">Sort</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-2 border border-border rounded-md bg-card text-foreground"
+            >
+              <option value="name">Name</option>
+              <option value="price">Price</option>
+              <option value="created_at">Created</option>
+              <option value="status">Status</option>
+            </select>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value as any)}
+              className="px-3 py-2 border border-border rounded-md bg-card text-foreground"
+            >
+              <option value="asc">Asc</option>
+              <option value="desc">Desc</option>
+            </select>
+          </div>
+          <div className="text-xs text-muted-foreground ml-auto">
+            Showing {displayedMeals.length} of {meals.length}
+          </div>
+        </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Image
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('admin', 'image', language)}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('common', 'name', language)}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('admin', 'category', language)}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('common', 'price', language)}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('admin', 'status', language)}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {getTranslation('admin', 'actions', language)}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {meals.map((meal) => (
+            <tbody className="bg-card divide-y divide-border">
+              {displayedMeals.map((meal) => (
                 <tr key={meal.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <img 
                       src={meal.image || '/placeholder.png'} 
-                      alt={meal.name}
+                      alt={typeof meal.name === 'string' ? meal.name : getLocalizedText({ en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' }, language)}
                       className="h-12 w-12 rounded object-cover"
                     />
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{meal.name}</div>
-                    <div className="text-sm text-gray-500">{meal.description}</div>
+                    <div className="text-sm font-medium text-foreground">
+                      {typeof meal.name === 'string' ? meal.name : getLocalizedText({ en: meal.name?.en ?? '', ar: meal.name?.ar ?? '', he: meal.name?.he ?? '' }, language)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {typeof meal.description === 'string' ? meal.description : getLocalizedText({ en: meal.description?.en ?? '', ar: meal.description?.ar ?? '', he: meal.description?.he ?? '' }, language)}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {getCategoryName(meal.category_id)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${meal.price.toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {formatCurrency(meal.price, language)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      meal.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      meal.is_active ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
                     }`}>
-                      {meal.is_active ? 'Active' : 'Inactive'}
+                      {meal.is_active
+                        ? getTranslation('admin', 'active', language)
+                        : getTranslation('admin', 'inactive', language)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -348,23 +457,23 @@ export default function MealsPage() {
                       <button
                         onClick={() => toggleActive(meal)}
                         className={`p-2 rounded ${
-                          meal.is_active ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50'
+                          meal.is_active ? 'text-accent hover:bg-accent/10' : 'text-primary hover:bg-primary/10'
                         }`}
-                        title={meal.is_active ? 'Deactivate' : 'Activate'}
+                        title={meal.is_active ? getTranslation('admin', 'deactivate', language) : getTranslation('admin', 'activate', language)}
                       >
                         {meal.is_active ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                       <button
                         onClick={() => openModal(meal)}
-                        className="text-blue-600 hover:bg-blue-50 p-2 rounded"
-                        title="Edit"
+                        className="text-primary hover:bg-primary/10 p-2 rounded"
+                        title={getTranslation('common', 'edit', language)}
                       >
                         <Pencil size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(meal.id)}
-                        className="text-red-600 hover:bg-red-50 p-2 rounded"
-                        title="Delete"
+                        className="text-destructive hover:bg-destructive/10 p-2 rounded"
+                        title={getTranslation('admin', 'delete', language)}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -378,21 +487,34 @@ export default function MealsPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              {editingMeal ? 'Edit Meal' : 'Add New Meal'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn overflow-y-auto">
+          <div className="bg-card rounded-2xl max-w-2xl w-full shadow-2xl animate-slideUp my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+              <h2 className="text-2xl font-bold text-foreground">
+                {editingMeal ? getTranslation('admin', 'editMeal', language) : getTranslation('admin', 'newMeal', language)}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-5">
               {/* Language Tabs */}
-              <div className="flex border-b border-gray-200">
+              <div className="flex border-b border-border">
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'en'
-                      ? 'border-green-600 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   English
@@ -402,8 +524,8 @@ export default function MealsPage() {
                   onClick={() => setActiveTab('ar')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'ar'
-                      ? 'border-green-600 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   العربية
@@ -413,53 +535,41 @@ export default function MealsPage() {
                   onClick={() => setActiveTab('he')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === 'he'
-                      ? 'border-green-600 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   עברית
                 </button>
               </div>
 
-              {/* Default Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Default Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
-                  required
-                />
-              </div>
-
               {/* English Tab */}
               {activeTab === 'en' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      English Name
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'englishName', language)} *
                     </label>
                     <input
                       type="text"
                       value={formData.name_en}
-                      onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      onChange={(e) => setFormData({ ...formData, name_en: e.target.value, name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="Meal name in English"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      English Description
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'englishDescription', language)} *
                     </label>
                     <textarea
                       value={formData.description_en}
-                      onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      onChange={(e) => setFormData({ ...formData, description_en: e.target.value, description: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="Description in English..."
                       rows={3}
+                      required
                     />
                   </div>
                 </>
@@ -469,26 +579,26 @@ export default function MealsPage() {
               {activeTab === 'ar' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Arabic Name
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'arabicName', language)}
                     </label>
                     <input
                       type="text"
                       value={formData.name_ar}
                       onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="الاسم بالعربية"
                       dir="rtl"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Arabic Description
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'arabicDescription', language)}
                     </label>
                     <textarea
                       value={formData.description_ar}
                       onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="الوصف بالعربية..."
                       rows={3}
                       dir="rtl"
@@ -501,26 +611,26 @@ export default function MealsPage() {
               {activeTab === 'he' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Hebrew Name
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'hebrewName', language)}
                     </label>
                     <input
                       type="text"
                       value={formData.name_he}
                       onChange={(e) => setFormData({ ...formData, name_he: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="שם בעברית"
                       dir="rtl"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-1">
-                      Hebrew Description
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {getTranslation('admin', 'hebrewDescription', language)}
                     </label>
                     <textarea
                       value={formData.description_he}
                       onChange={(e) => setFormData({ ...formData, description_he: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
                       placeholder="תיאור בעברית..."
                       rows={3}
                       dir="rtl"
@@ -529,77 +639,79 @@ export default function MealsPage() {
                 </>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Category
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {getTranslation('admin', 'category', language)}
                 </label>
                 <select
                   value={formData.category_id}
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground"
                   required
                 >
-                  <option value="">Select a category</option>
+                  <option value="">{getTranslation('admin', 'selectCategory', language)}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {typeof category.name === 'string' ? category.name : getLocalizedText({ en: category.name?.en ?? '', ar: category.name?.ar ?? '', he: category.name?.he ?? '' }, language)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Price
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {getTranslation('common', 'price', language)}
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Image URL
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {getTranslation('admin', 'imageUrl', language)}
                 </label>
                 <input
                   type="url"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
                   required
                 />
               </div>
 
               {/* Ingredients Section */}
               <div className="border-t pt-4 mt-4">
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Ingredients Configuration
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  {getTranslation('admin', 'ingredientsConfiguration', language)}
                 </label>
-                <p className="text-xs text-gray-600 mb-3">
-                  Configure which ingredients users can add or remove for this meal.
+                <p className="text-xs text-muted-foreground mb-3">
+                  {getTranslation('admin', 'ingredientsConfigHelp', language)}
                 </p>
                 
                 <input
                   type="text"
-                  placeholder="Search ingredients..."
+                  placeholder={getTranslation('admin', 'searchIngredients', language)}
                   value={ingredientSearch}
                   onChange={(e) => setIngredientSearch(e.target.value)}
-                  className="w-full px-3 py-2 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
+                  className="w-full px-3 py-2 mb-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-card text-foreground placeholder:text-muted-foreground"
                 />
 
-                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
                   {filteredIngredients.map((ingredient) => {
                     const config = ingredientSelection[ingredient.id] || { mode: 'none', removable: false };
                     return (
                       <div
                         key={ingredient.id}
-                        className="flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50"
+                        className="flex items-center justify-between p-3 border-b border-border hover:bg-muted/50"
                       >
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{ingredient.name}</p>
-                          <p className="text-xs text-gray-500">+${ingredient.price.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {typeof ingredient.name === 'string' ? ingredient.name : getLocalizedText({ en: ingredient.name?.en ?? '', ar: ingredient.name?.ar ?? '', he: ingredient.name?.he ?? '' }, language)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">+{formatCurrency(ingredient.price, language)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
@@ -607,15 +719,15 @@ export default function MealsPage() {
                             onClick={() => toggleIngredientMode(ingredient.id)}
                             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                               config.mode === 'none'
-                                ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
                                 : config.mode === 'default'
-                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                                : 'bg-primary/10 text-primary hover:bg-primary/20'
                             }`}
                           >
-                            {config.mode === 'none' && 'Not included'}
-                            {config.mode === 'default' && 'Included by default'}
-                            {config.mode === 'extra' && 'Available as extra'}
+                            {config.mode === 'none' && getTranslation('admin', 'notIncluded', language)}
+                            {config.mode === 'default' && getTranslation('common', 'includedByDefault', language)}
+                            {config.mode === 'extra' && getTranslation('admin', 'availableAsExtra', language)}
                           </button>
                           {config.mode === 'default' && (
                             <button
@@ -623,12 +735,12 @@ export default function MealsPage() {
                               onClick={() => toggleRemovable(ingredient.id)}
                               className={`px-2 py-1 text-xs font-medium rounded ${
                                 config.removable
-                                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  ? 'bg-accent/20 text-accent hover:bg-accent/30'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
                               }`}
-                              title={config.removable ? 'User can remove' : 'Required (cannot remove)'}
+                              title={config.removable ? getTranslation('admin', 'userCanRemove', language) : getTranslation('admin', 'requiredCannotRemove', language)}
                             >
-                              {config.removable ? '✓ Removable' : '🔒 Required'}
+                              {config.removable ? `✓ ${getTranslation('admin', 'removable', language)}` : `🔒 ${getTranslation('admin', 'required', language)}`}
                             </button>
                           )}
                         </div>
@@ -636,36 +748,47 @@ export default function MealsPage() {
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Click ingredient status to cycle: Not included → Included by default → Available as extra → Not included
+                <p className="text-xs text-muted-foreground mt-2">
+                  {getTranslation('admin', 'ingredientsCycleHint', language)}
                 </p>
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                />
-                <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-                  Active
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
+                <div>
+                  <label htmlFor="is_active" className="font-medium text-foreground">
+                    {getTranslation('admin', 'activeStatus', language)}
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    {getTranslation('admin', 'activeStatusMealHelp', language)}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-[hsl(var(--background))] after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                 </label>
               </div>
-              <div className="flex gap-3 pt-4">
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-border flex gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-foreground hover:bg-muted transition-all font-medium"
                 >
-                  Cancel
+                  {getTranslation('admin', 'cancel', language)}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-medium shadow-sm hover:shadow"
                 >
-                  {editingMeal ? 'Update' : 'Create'}
+                  {editingMeal ? getTranslation('admin', 'updateMeal', language) : getTranslation('admin', 'createMeal', language)}
                 </button>
               </div>
             </form>
@@ -675,3 +798,4 @@ export default function MealsPage() {
     </AdminLayout>
   );
 }
+
