@@ -6,7 +6,7 @@ from .config import settings
 from .database import connect_to_mongo, close_mongo_connection, get_database
 
 # Import routers
-from .routers import categories, meals, ingredients, auth, orders, users
+from .routers import categories, meals, ingredients, auth, orders, users, websocket, analytics, reviews
 from .routers import settings as settings_router
 
 @asynccontextmanager
@@ -46,7 +46,10 @@ app.include_router(meals.router, prefix="/api/v1/meals", tags=["Meals"])
 app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews"])
 app.include_router(settings_router.router, prefix="/api/v1/settings", tags=["Settings"])
+app.include_router(websocket.router, prefix="/api/v1", tags=["WebSocket"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 @app.get("/")
 async def read_root():

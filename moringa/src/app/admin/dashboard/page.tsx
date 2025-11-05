@@ -17,8 +17,29 @@ import {
   Calendar,
   Star,
   Award,
-  Activity
+  Activity,
+  Download,
+  FileText
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  PieChart,
+  Pie,
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
 import api from '@/lib/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
@@ -39,6 +60,15 @@ interface DashboardStats {
   pendingOrders: number;
 }
 
+interface AnalyticsData {
+  salesOverview: any;
+  dailySales: any[];
+  popularMeals: any[];
+  peakHours: any[];
+  ordersByType: any[];
+  ordersByStatus: any[];
+}
+
 export default function AdminDashboard() {
   const { language } = useLanguage();
   const [stats, setStats] = useState<DashboardStats>({
@@ -52,13 +82,237 @@ export default function AdminDashboard() {
     todayOrders: 0,
     todayRevenue: 0,
     avgOrderValue: 0,
-    pendingOrders: 0
+    pendingOrders: 0,
+  });
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    salesOverview: null,
+    dailySales: [],
+    popularMeals: [],
+    peakHours: [],
+    ordersByType: [],
+    ordersByStatus: [],
   });
   const [loading, setLoading] = useState(true);
 
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
   useEffect(() => {
     fetchDashboardData();
+    fetchAnalyticsData();
   }, []);
+
+  const fetchAnalyticsData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [
+        salesOverviewRes,
+        dailySalesRes,
+        popularMealsRes,
+        peakHoursRes,
+        ordersByTypeRes,
+        ordersByStatusRes,
+      ] = await Promise.all([
+        api.get('/analytics/sales/overview', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get('/analytics/sales/daily?days=30', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get('/analytics/meals/popular?limit=10', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get('/analytics/orders/peak-hours?days=30', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get('/analytics/orders/by-type', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        api.get('/analytics/orders/by-status', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      setAnalytics({
+        salesOverview: salesOverviewRes.data,
+        dailySales: dailySalesRes.data.data || [],
+        popularMeals: popularMealsRes.data.data || [],
+        peakHours: peakHoursRes.data.data || [],
+        ordersByType: ordersByTypeRes.data.data || [],
+        ordersByStatus: ordersByStatusRes.data.data || [],
+      });
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+    }
+  };
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['Date', 'Orders', 'Revenue'],
+      ...analytics.dailySales.map((day: any) => [
+        day.date,
+        day.orders,
+        day.revenue.toFixed(2),
+      ]),
+    ]
+      .map((row) => row.join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const today = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(59, 130, 246); // Primary blue
+    doc.text('Moringa Restaurant', 14, 20);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Sales Analytics Report', 14, 30);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(107, 114, 128); // Muted gray
+    doc.text(`Generated on: ${today}`, 14, 38);
+
+    // Summary Stats
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Summary Statistics', 14, 50);
+    
+    autoTable(doc, {
+      startY: 55,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Orders', stats.totalOrders.toString()],
+        ['Total Revenue', `₪${stats.totalRevenue.toFixed(2)}`],
+        ['Average Order Value', `₪${stats.avgOrderValue.toFixed(2)}`],
+        ['Today\'s Orders', stats.todayOrders.toString()],
+        ['Today\'s Revenue', `₪${stats.todayRevenue.toFixed(2)}`],
+        ['Pending Orders', stats.pendingOrders.toString()],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    // Daily Sales Table
+    const finalY = (doc as any).lastAutoTable.finalY || 110;
+    doc.setFontSize(14);
+    doc.text('Daily Sales (Last 30 Days)', 14, finalY + 10);
+    
+    autoTable(doc, {
+      startY: finalY + 15,
+      head: [['Date', 'Orders', 'Revenue']],
+      body: analytics.dailySales.map((day: any) => [
+        new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        day.orders.toString(),
+        `₪${day.revenue.toFixed(2)}`,
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 50, halign: 'right' },
+      },
+    });
+
+    // Popular Meals Table
+    const finalY2 = (doc as any).lastAutoTable.finalY || 200;
+    if (finalY2 > 250) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Top 10 Popular Meals', 14, 20);
+      autoTable(doc, {
+        startY: 25,
+        head: [['Meal Name', 'Orders', 'Revenue']],
+        body: analytics.popularMeals.slice(0, 10).map((meal: any) => [
+          meal.meal_name,
+          meal.order_count.toString(),
+          `₪${meal.total_revenue.toFixed(2)}`,
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129] },
+      });
+    } else {
+      doc.setFontSize(14);
+      doc.text('Top 10 Popular Meals', 14, finalY2 + 10);
+      autoTable(doc, {
+        startY: finalY2 + 15,
+        head: [['Meal Name', 'Orders', 'Revenue']],
+        body: analytics.popularMeals.slice(0, 10).map((meal: any) => [
+          meal.meal_name,
+          meal.order_count.toString(),
+          `₪${meal.total_revenue.toFixed(2)}`,
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129] },
+      });
+    }
+
+    // Order Statistics
+    const finalY3 = (doc as any).lastAutoTable.finalY || 200;
+    if (finalY3 > 250) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Order Distribution', 14, 20);
+      
+      autoTable(doc, {
+        startY: 25,
+        head: [['Order Type', 'Count', 'Percentage']],
+        body: analytics.ordersByType.map((type: any) => [
+          type.type,
+          type.count.toString(),
+          `${type.percentage}%`,
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [245, 158, 11] },
+      });
+    } else {
+      doc.setFontSize(14);
+      doc.text('Order Distribution', 14, finalY3 + 10);
+      
+      autoTable(doc, {
+        startY: finalY3 + 15,
+        head: [['Order Type', 'Count', 'Percentage']],
+        body: analytics.ordersByType.map((type: any) => [
+          type.type,
+          type.count.toString(),
+          `${type.percentage}%`,
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [245, 158, 11] },
+      });
+    }
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(107, 114, 128);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Save PDF
+    doc.save(`sales-report-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -66,9 +320,9 @@ export default function AdminDashboard() {
       
       // Fetch all data in parallel
       const [ordersRes, usersRes, mealsRes] = await Promise.all([
-        api.get('/orders'),
+        api.get('/orders/'),
         api.get('/users'),
-        api.get('/meals?active_only=false')
+        api.get('/meals/?active_only=false')
       ]);
 
       console.log('Dashboard API Responses:', { ordersRes: ordersRes.data, usersRes: usersRes.data, mealsRes: mealsRes.data });
@@ -258,6 +512,34 @@ export default function AdminDashboard() {
   return (
     <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
       <div className="space-y-5" dir="ltr">
+        {/* Export Reports Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-2xl border border-blue-200 dark:border-blue-900 p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Export Analytics Reports</h2>
+              <p className="text-sm text-muted-foreground">Download comprehensive sales and performance data</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={exportToCSV}
+                disabled={analytics.dailySales.length === 0}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </button>
+              <button
+                onClick={exportToPDF}
+                disabled={analytics.dailySales.length === 0}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                <FileText className="h-4 w-4" />
+                Export PDF
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat, index) => (
@@ -346,39 +628,54 @@ export default function AdminDashboard() {
 
         {/* Charts and Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Revenue Chart */}
+          {/* Daily Sales Chart */}
           <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'monthlyRevenue', language)}</h3>
-              <span className="text-sm text-muted-foreground">Last 12 months</span>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground tracking-tight">Daily Sales Trend</h3>
+                <p className="text-xs text-muted-foreground mt-1">Last 30 days performance</p>
+              </div>
             </div>
-            <div className="h-64 flex items-end justify-between gap-2 px-2">
-              {stats.monthlyRevenue.map((revenue, index) => {
-                const maxRevenue = Math.max(...stats.monthlyRevenue, 1);
-                const heightPercent = (revenue / maxRevenue) * 100;
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center group">
-                    <div className="w-full relative">
-                      {/* Hover tooltip */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="bg-foreground text-background px-2 py-1 rounded text-xs whitespace-nowrap">
-                          {formatCurrency(revenue, language, 'ILS')}
-                        </div>
-                      </div>
-                      <div
-                        className="w-full bg-gradient-to-t from-primary to-primary/70 rounded-t-lg transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 min-h-[4px]"
-                        style={{
-                          height: `${Math.max(heightPercent, 2)}%`
-                        }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground mt-2 font-medium">
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][index]}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={analytics.dailySales}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickFormatter={(value) => `₪${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value: any) => [`₪${value.toFixed(2)}`, 'Revenue']}
+                  labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorRevenue)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
 
           {/* Recent Orders */}
@@ -655,6 +952,147 @@ export default function AdminDashboard() {
               <Activity className="h-4 w-4" />
               <span>{stats.popularMeals.filter(m => m.available).length} available</span>
             </div>
+          </div>
+        </div>
+
+        {/* Additional Analytics Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Peak Hours Chart */}
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">Peak Order Hours</h3>
+              <p className="text-sm text-muted-foreground mt-1">Order distribution by hour of day</p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics.peakHours}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+                <XAxis 
+                  dataKey="hour" 
+                  stroke="#6b7280"
+                  fontSize={12}
+                  tickFormatter={(value) => `${value}:00`}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  fontSize={12}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value: any) => [value, 'Orders']}
+                  labelFormatter={(label) => `${label}:00 - ${label}:59`}
+                />
+                <Legend />
+                <Bar dataKey="count" fill="#3b82f6" name="Orders" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Order Types Distribution */}
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Types</h3>
+              <p className="text-sm text-muted-foreground mt-1">Distribution by delivery type</p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analytics.ordersByType}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ type, percentage }: any) => `${type}: ${percentage}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {analytics.ordersByType.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Popular Meals Chart */}
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">Top 10 Popular Meals</h3>
+              <p className="text-sm text-muted-foreground mt-1">By order count</p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics.popularMeals} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+                <XAxis type="number" stroke="#6b7280" fontSize={12} />
+                <YAxis 
+                  type="category" 
+                  dataKey="meal_name" 
+                  width={120}
+                  stroke="#6b7280"
+                  fontSize={11}
+                  tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 15)}...` : value}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  formatter={(value: any) => [value, 'Orders']}
+                />
+                <Legend />
+                <Bar dataKey="order_count" fill="#10b981" name="Orders" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Order Status Distribution */}
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Status</h3>
+              <p className="text-sm text-muted-foreground mt-1">Current order distribution</p>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analytics.ordersByStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ status, percentage }: any) => `${status}: ${percentage}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {analytics.ordersByStatus.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

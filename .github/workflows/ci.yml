@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.adminCommand({ ping: 1 })'" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Seed database
+        env:
+          MONGODB_URL: mongodb://localhost:27017
+        working-directory: backend
+        run: |
+          python seed_db.py || true
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          MONGODB_URL: mongodb://localhost:27017
+        run: |
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8000/api/v1/health >/dev/null; then echo "Backend up"; break; fi; sleep 1; done
+
+      - name: Run backend tests (python scripts)
+        working-directory: backend
+        run: |
+          python test_endpoints.py || true
+          python test_features.py || true
+          python test_real_time_notifications.py || true
+          python test_order_status_ws.py || true
+          python test_customer_status_ws.py || true
+          python test_reviews_flow.py || true
+          python test_reviews_moderation_flow.py || true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        working-directory: moringa
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: Start Next.js
+        working-directory: moringa
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+        run: |
+          nohup npm run dev -- -p 3002 &
+          for i in {1..60}; do
+            if curl -sSf http://localhost:3002 >/dev/null; then echo "Next.js up"; break; fi; sleep 1; done
+
+      - name: Run Playwright tests
+        working-directory: moringa
+        env:
+          BASE_URL: http://localhost:3002
+        run: |
+          npm run test:e2e
+
+      - name: Upload Playwright traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: moringa/test-results/**

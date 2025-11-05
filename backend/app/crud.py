@@ -350,6 +350,14 @@ class CRUDOrder:
         delivery_fee = 5.0 if obj_in.order_type == models.OrderType.DELIVERY else 0.0
         total_amount = subtotal + tax_amount + delivery_fee
 
+        # Create initial status history
+        initial_history = models.OrderStatusHistory(
+            status=models.OrderStatus.PENDING,
+            changed_at=datetime.utcnow(),
+            changed_by="system",
+            notes="Order created"
+        )
+
         # Create order document
         db_obj = models.Order(
             id=str(uuid.uuid4()),
@@ -370,19 +378,34 @@ class CRUDOrder:
             delivery_address=obj_in.delivery_address,
             special_instructions=obj_in.special_instructions,
             order_number=order_number,
+            status_history=[initial_history],
         )
         return await db_obj.insert()
     
-    async def update(self, *, db_obj: models.Order, obj_in: schemas.OrderUpdate) -> models.Order:
+    async def update(self, *, db_obj: models.Order, obj_in: schemas.OrderUpdate, changed_by: str = "admin") -> models.Order:
         """Update order"""
         update_data = obj_in.dict(exclude_unset=True)
         update_data["updated_at"] = datetime.utcnow()
         
-        # Update status timestamps
-        if "status" in update_data:
-            if update_data["status"] == models.OrderStatus.CONFIRMED:
+        # Track status changes in history
+        if "status" in update_data and update_data["status"] != db_obj.status:
+            new_status = update_data["status"]
+            status_change = models.OrderStatusHistory(
+                status=new_status,
+                changed_at=datetime.utcnow(),
+                changed_by=changed_by,
+                notes=f"Status changed from {db_obj.status} to {new_status}"
+            )
+            
+            # Append to history
+            if not db_obj.status_history:
+                db_obj.status_history = []
+            db_obj.status_history.append(status_change)
+            
+            # Update status timestamps
+            if new_status == models.OrderStatus.CONFIRMED:
                 update_data["confirmed_at"] = datetime.utcnow()
-            elif update_data["status"] == models.OrderStatus.DELIVERED:
+            elif new_status == models.OrderStatus.DELIVERED:
                 update_data["completed_at"] = datetime.utcnow()
         
         for field, value in update_data.items():

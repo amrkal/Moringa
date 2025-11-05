@@ -80,6 +80,76 @@ A comprehensive full-stack food ordering application built with **Next.js 15** (
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/api/v1/docs
 
+## ✅ Testing
+
+### Backend quick tests (Python scripts)
+
+Run these against a running FastAPI backend on port 8000:
+
+```powershell
+cd backend
+python test_endpoints.py
+python test_features.py
+python test_real_time_notifications.py
+python test_order_status_ws.py
+python test_customer_status_ws.py
+python test_reviews_flow.py
+python test_reviews_moderation_flow.py
+```
+
+### Frontend E2E (Playwright)
+
+#### Option 1: One-command orchestration (Windows)
+
+From the repo root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-e2e.ps1
+```
+
+This script:
+- Starts FastAPI backend on :8000
+- Starts Next.js dev server on :3002
+- Runs Playwright E2E tests
+- Stops both servers after completion
+
+#### Option 2: Manual (three terminals)
+
+```powershell
+# Terminal 1: Backend
+cd backend
+.\venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2: Frontend
+cd moringa
+npm install
+npx playwright install chromium
+npm run dev -- -p 3002
+
+# Terminal 3: E2E tests
+cd moringa
+npm run test:e2e
+```
+
+Playwright will validate the Admin Dashboard exports (CSV/PDF) end-to-end, including:
+- CSV filename matches `sales-report-*.csv` and contains header `Date,Orders,Revenue`
+- PDF filename matches `sales-report-*.pdf` and file size > 500 bytes
+
+Demo admin credentials (seeded):
+
+- Admin (default): Phone +1234567890 / Password admin123
+- Admin (tests): Phone +254712345678 / Password admin123
+- Customer (seeded): Phone +1234567891 / Password customer123
+
+### CI
+
+This repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+- Spins up MongoDB
+- Installs and starts FastAPI backend
+- Runs the Python test scripts
+- Installs and starts Next.js
+- Runs Playwright E2E tests
+
 ## 🛠️ Technology Stack
 
 ### Frontend

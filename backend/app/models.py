@@ -145,6 +145,13 @@ class OrderItemIngredient(BaseModel):
     name: str
     price: float
 
+class OrderStatusHistory(BaseModel):
+    """Track order status changes"""
+    status: OrderStatus
+    changed_at: datetime = Field(default_factory=datetime.utcnow)
+    changed_by: Optional[str] = None  # user_id or "system"
+    notes: Optional[str] = None
+
 class OrderItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     meal_id: str
@@ -193,6 +200,7 @@ class Order(Document):
     # Tracking
     order_number: Optional[str] = None
     preparation_time: Optional[int] = None  # in minutes
+    status_history: List[OrderStatusHistory] = Field(default_factory=list)
     
     # Payment information
     payment_intent_id: Optional[str] = None
@@ -245,16 +253,43 @@ class Coupon(Document):
             IndexModel([("expires_at", ASCENDING)]),
         ]
 
+class ReviewStatus(str, PyEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    FLAGGED = "FLAGGED"
+
 class Review(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     user_id: str
-    meal_id: Optional[str] = None
+    user_name: Optional[str] = None  # Cached for display
+    meal_id: str
+    meal_name: Optional[str] = None  # Cached for display
     order_id: Optional[str] = None
+    
+    # Review content
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
-    images: List[str] = []
-    is_verified: bool = False
+    photos: List[str] = []  # URLs to uploaded photos
+    
+    # Moderation
+    status: ReviewStatus = ReviewStatus.PENDING
+    is_verified: bool = False  # Verified purchase
+    flagged_reason: Optional[str] = None
+    moderation_notes: Optional[str] = None
+    moderated_by: Optional[str] = None  # admin user_id
+    moderated_at: Optional[datetime] = None
+    
+    # Engagement
+    helpful_count: int = 0
+    unhelpful_count: int = 0
+    admin_response: Optional[str] = None
+    admin_response_at: Optional[datetime] = None
+    admin_responder_id: Optional[str] = None
+    
+    # Timestamps
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
     class Settings:
         name = "reviews"
@@ -263,7 +298,10 @@ class Review(Document):
             IndexModel([("meal_id", ASCENDING)]),
             IndexModel([("order_id", ASCENDING)]),
             IndexModel([("rating", DESCENDING)]),
+            IndexModel([("status", ASCENDING)]),
+            IndexModel([("is_verified", ASCENDING)]),
             IndexModel([("created_at", DESCENDING)]),
+            IndexModel([("helpful_count", DESCENDING)]),
         ]
 
 class Notification(Document):

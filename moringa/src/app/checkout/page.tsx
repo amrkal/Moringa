@@ -129,9 +129,9 @@ export default function CheckoutPage() {
   const tax = subtotal * 0.08;
   const total = subtotal + deliveryFee + tax;
 
-  const placeOrder = async () => {
-    // Double-check authentication before placing order
-    if (!isAuthenticated || !user?.phone) {
+  const placeOrder = async (skipAuthCheck: boolean = false) => {
+    // Double-check authentication before placing order (unless explicitly skipped)
+    if (!skipAuthCheck && (!isAuthenticated || !user?.phone)) {
       toast.error(getTranslation('common', 'pleaseVerifyPhone', language) || 'Please verify your phone number');
       setShowVerification(true);
       return;
@@ -182,7 +182,7 @@ export default function CheckoutPage() {
         order_type: mapOrderType(orderType),
         payment_method: mapPaymentMethod(paymentMethod),
         delivery_address: orderType === 'DELIVERY' ? deliveryAddress : undefined,
-        phone_number: user.phone,
+        phone_number: user?.phone || '',
         special_instructions: specialInstructions || undefined,
         items: fixedItems.map((it) => {
           const perItemPrice = it.meal.price + (it.selectedIngredients || []).reduce((sum, si) => sum + (si.price || 0), 0);
@@ -236,8 +236,13 @@ export default function CheckoutPage() {
         addNotification({
           orderId: orderData.id || orderData._id,
           orderNumber: orderNumber,
-          customerName: user.name || user.phone,
+          customerName: user?.name || user?.phone || 'Guest',
           total: totalAmount,
+          items: items.map(item => ({
+            meal_name: item.meal.name,
+            quantity: item.quantity,
+            price: item.meal.price,
+          })),
         });
         
         clearCart();
@@ -285,8 +290,8 @@ export default function CheckoutPage() {
       return;
     }
     
-    // Automatically place the order after verification
-    await placeOrder();
+    // Automatically place the order after verification (skip auth check since user just verified)
+    await placeOrder(true);
   };
 
   return (
@@ -595,19 +600,12 @@ export default function CheckoutPage() {
                   >
                     {isSubmitting 
                       ? `${getTranslation('common', 'placeOrder', language)}...` 
-                      : isAuthenticated 
-                        ? `${getTranslation('common', 'placeOrder', language)} - ${formatPrice(total, language)}`
-                        : orderType === 'DELIVERY'
-                          ? `${getTranslation('common', 'continueToVerification', language)} - ${formatPrice(total, language)}`
-                          : `${getTranslation('common', 'verifyPhone', language)} & ${getTranslation('common', 'placeOrder', language)} - ${formatPrice(total, language)}`
+                      : `${getTranslation('common', 'placeOrder', language)} - ${formatPrice(total, language)}`
                     }
                   </Button>
                   {!isAuthenticated && (
                     <p className="text-xs text-center text-muted-foreground mt-2">
-                      {orderType === 'DELIVERY' 
-                        ? getTranslation('common', 'verifyToViewOrders', language)
-                        : getTranslation('common', 'verifyToViewOrders', language)
-                      }
+                      {getTranslation('common', 'verifyToViewOrders', language)}
                     </p>
                   )}
                 </CardContent>

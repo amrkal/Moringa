@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import { useCartStore } from '@/store/cart';
 import MealCustomizeModal, { MealForCustomize } from '@/components/MealCustomizeModal';
+import MealRating from '@/components/MealRating';
 
 
 interface Translation { en?: string; ar?: string; he?: string }
@@ -382,6 +383,9 @@ export default function MenuPage() {
                               {getLocalizedDescription(meal)}
                             </p>
                           )}
+                          <div className="mb-2">
+                            <MealRating mealId={meal._id || meal.id || ''} showCount size="sm" />
+                          </div>
                           <div className="flex items-center justify-between mt-auto pt-2 border-t border-[hsl(var(--border))]/50">
                             <span className="text-base font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                             <button
@@ -562,6 +566,9 @@ export default function MenuPage() {
                                 {getLocalizedDescription(meal)}
                               </p>
                             )}
+                            <div className="mb-3">
+                              <MealRating mealId={meal._id || meal.id || ''} showCount size="md" />
+                            </div>
                             <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
                               <span className="text-xl font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                               <button

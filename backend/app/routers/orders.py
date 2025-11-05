@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from ..auth import get_current_active_user, get_current_admin_user
 from .. import crud, models, schemas
+from ..websocket import manager
 
 router = APIRouter()
 
@@ -30,6 +31,32 @@ async def create_order(
                 )
     
     order = await crud.crud_order.create(obj_in=order_in, user_id=current_user.id)
+    
+    # Notify admins via WebSocket about new order
+    try:
+        order_data = {
+            "id": str(order.id),
+            "order_number": order.order_number,
+            "customer_name": current_user.name,
+            "customer_phone": current_user.phone,
+            "total_amount": float(order.total_amount),
+            "status": order.status,
+            "items": [
+                {
+                    "meal_id": str(item.meal_id),
+                    "meal_name": item.meal_name,
+                    "quantity": item.quantity,
+                    # Use meal_price from models.OrderItem; 'price' attribute doesn't exist
+                    "price": float(getattr(item, "meal_price", 0.0))
+                }
+                for item in order.items
+            ]
+        }
+        await manager.notify_new_order(order_data)
+    except Exception as e:
+        # Log error but don't fail the order creation
+        print(f"WebSocket notification error: {e}")
+    
     return order
 
 @router.get("/my-orders", response_model=List[models.Order])
@@ -91,6 +118,18 @@ async def update_order(
         raise HTTPException(status_code=404, detail="Order not found")
     
     order = await crud.crud_order.update(db_obj=order, obj_in=order_in)
+    
+    # Notify customer via WebSocket about status update
+    if order_in.status:
+        try:
+            await manager.notify_order_status_update(
+                order_id=str(order.id),
+                status=order_in.status,
+                customer_id=str(order.user_id)
+            )
+        except Exception as e:
+            print(f"WebSocket notification error: {e}")
+    
     return order
 
 @router.get("/stats/dashboard", response_model=schemas.DashboardStats)

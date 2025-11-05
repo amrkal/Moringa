@@ -12,6 +12,11 @@ interface OrderNotification {
   total: number;
   timestamp: Date;
   read: boolean;
+  items?: Array<{
+    meal_name: string;
+    quantity: number;
+    price: number;
+  }>;
 }
 
 interface NotificationContextType {
@@ -28,6 +33,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<OrderNotification[]>([]);
+  const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
 
   const formatOrderNumber = (value: any) => {
     const s = String(value ?? '');
@@ -35,6 +41,50 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const digits = match && match.length ? match[match.length - 1] : s.replace(/\D/g, '');
     if (!digits) return s ? s.slice(-6) : '';
     return digits.slice(-6);
+  };
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setBrowserNotificationsEnabled(true);
+      } else if (Notification.permission !== 'denied') {
+        // Auto-request permission for admin users
+        Notification.requestPermission().then(permission => {
+          setBrowserNotificationsEnabled(permission === 'granted');
+        });
+      }
+    }
+  }, []);
+
+  const showBrowserNotification = (notification: Omit<OrderNotification, 'id' | 'timestamp' | 'read'>) => {
+    if (!browserNotificationsEnabled || typeof window === 'undefined' || !('Notification' in window)) {
+      return;
+    }
+
+    try {
+      const itemCount = notification.items?.length || 0;
+      const itemText = itemCount > 0 ? `\n${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : '';
+      const n = new Notification('🎉 New Order Received!', {
+        body: `Order #${formatOrderNumber(notification.orderNumber)}\n${notification.customerName || 'Customer'}\n$${notification.total.toFixed(2)}${itemText}`,
+        icon: '/logo.jpg',
+        badge: '/logo.jpg',
+        tag: `order-${notification.orderId}`,
+        requireInteraction: false,
+        silent: false,
+      });
+
+      n.onclick = () => {
+        window.focus();
+        window.location.href = '/admin/orders';
+        n.close();
+      };
+
+      // Auto-close after 10 seconds
+      setTimeout(() => n.close(), 10000);
+    } catch (error) {
+      console.log('Browser notification failed:', error);
+    }
   };
 
   // Load notifications from localStorage on mount
@@ -81,10 +131,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Save notifications to localStorage whenever they change
+  // Save notifications to localStorage whenever they change + auto-archive old ones
   useEffect(() => {
     if (notifications.length > 0) {
-      localStorage.setItem('orderNotifications', JSON.stringify(notifications));
+      // Auto-archive notifications older than 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const recent = notifications.filter(n => new Date(n.timestamp) >= sevenDaysAgo);
+      
+      // Only update if we actually removed some
+      if (recent.length !== notifications.length) {
+        setNotifications(recent);
+      }
+      
+      localStorage.setItem('orderNotifications', JSON.stringify(recent));
     }
   }, [notifications]);
 
@@ -97,6 +158,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
 
     setNotifications(prev => [newNotification, ...prev]);
+
+    // Show browser notification (native OS)
+    if (showToast) {
+      showBrowserNotification(notification);
+    }
 
     // Only show toast notification if showToast is true (admin side only)
     if (showToast) {
@@ -126,9 +192,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                       Customer: {notification.customerName}
                     </p>
                   )}
-                  <p className="mt-1 text-lg font-bold text-primary">
-                    ${notification.total.toFixed(2)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-lg font-bold text-primary">
+                      ${notification.total.toFixed(2)}
+                    </p>
+                    {notification.items && notification.items.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full font-medium">
+                        {notification.items.length} {notification.items.length === 1 ? 'item' : 'items'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

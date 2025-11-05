@@ -52,7 +52,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/categories?active_only=false');
+      const response = await api.get('/categories/?active_only=false');
       setCategories(response.data || []);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedFetchCategories', language));

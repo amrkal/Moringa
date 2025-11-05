@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+````markdown
+# Moringa Frontend (Next.js)
 
-## Getting Started
+This is the Next.js App Router frontend for the Moringa system.
 
-First, run the development server:
+## Quick start
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1) Configure environment
+
+Create `.env.local` (or copy from `.env.local.example`):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) Install and run the dev server (default E2E port: 3002)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```powershell
+npm install
+npx playwright install chromium
+npm run dev -- -p 3002
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3002
 
-## Learn More
+## E2E tests (Playwright)
 
-To learn more about Next.js, take a look at the following resources:
+With backend running at :8000 and this dev server at :3002:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+npm run test:e2e
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The test `tests/e2e/analytics-exports.spec.ts` logs in via API, loads `/admin/dashboard`, triggers CSV/PDF exports, and verifies:
+- Filenames: `sales-report-*.csv` and `sales-report-*.pdf`
+- CSV contains header `Date,Orders,Revenue`
+- PDF file is non-empty
 
-## Deploy on Vercel
+Tip: You can override the base URL by setting `BASE_URL` when running tests.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```powershell
+$env:BASE_URL='http://localhost:3002'; npm run test:e2e
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- API base URL is read from `NEXT_PUBLIC_API_URL` (default: http://localhost:8000/api/v1)
+- The admin dashboard expects an authenticated admin token in localStorage (`token`).
+  The Playwright test primes this via API login to +254712345678 / admin123.
+
+```bash
+```
+````

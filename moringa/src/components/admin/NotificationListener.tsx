@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import api from '@/lib/api';
 
 /**
- * Component that listens for new notifications and displays toast popups
+ * Component that listens for new notifications via WebSocket
+ * Falls back to polling if WebSocket connection fails
  * Only active on admin pages to prevent showing notifications to customers
  */
 export function NotificationListener() {
@@ -15,6 +17,7 @@ export function NotificationListener() {
   const initializedOrdersPollRef = useRef(false);
   const seenOrderIdsRef = useRef<Set<string>>(new Set());
   const [isPolling, setIsPolling] = useState(false);
+  const [usePolling, setUsePolling] = useState(false);
 
   const formatOrderNumber = (value: any) => {
     const s = String(value ?? '');
@@ -23,6 +26,62 @@ export function NotificationListener() {
     if (!digits) return s ? s.slice(-6) : '';
     return digits.slice(-6);
   };
+
+  // WebSocket connection for real-time notifications
+  const getWsUrl = () => {
+    const baseUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/api/v1/ws/admin';
+    // Add authentication token if available
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    return token ? `${baseUrl}?token=${token}` : baseUrl;
+  };
+  
+  const { isConnected: wsConnected } = useWebSocket(getWsUrl(), {
+    onMessage: (message) => {
+      // Handle incoming WebSocket messages
+      if (message.type === 'new_order' && message.data) {
+        const order = message.data;
+        const orderId = order.id;
+        
+        // Check if we've already seen this order
+        if (!seenOrderIdsRef.current.has(orderId)) {
+          seenOrderIdsRef.current.add(orderId);
+          localStorage.setItem('seenOrderIds', JSON.stringify(Array.from(seenOrderIdsRef.current)));
+          
+          // Add notification with toast
+          addNotification({
+            orderId: orderId,
+            orderNumber: formatOrderNumber(order.order_number),
+            customerName: order.customer_name || order.customer_phone || 'Customer',
+            total: order.total_amount || order.total || 0,
+            items: order.items || [],
+          }, true);
+        }
+      } else if (message.type === 'order_status_update' && message.data) {
+        // Handle order status updates (could update existing notification)
+        console.log('Order status updated:', message.data);
+      } else if (message.type === 'connection') {
+        console.log('WebSocket:', message.message);
+      }
+    },
+    onConnect: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✓ Real-time notifications active (WebSocket)');
+      }
+      setUsePolling(false); // Disable polling when WebSocket is active
+    },
+    onDisconnect: () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('→ Using polling fallback for notifications');
+      }
+      setUsePolling(true); // Enable polling fallback
+    },
+    onError: (error) => {
+      // Silently fall back to polling without spamming console
+      setUsePolling(true);
+    },
+    reconnectInterval: 3000,
+    maxReconnectAttempts: 10,
+  });
 
   useEffect(() => {
     // Skip the initial render to avoid showing old notifications
@@ -39,6 +98,25 @@ export function NotificationListener() {
       
       // Only show if it's unread
       if (!newNotification.read) {
+        // Show native browser notification
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            const n = new Notification('🎉 New Order Received!', {
+              body: `Order #${formatOrderNumber(newNotification.orderNumber)}\n${newNotification.customerName || 'Customer'}\n$${newNotification.total.toFixed(2)}`,
+              icon: '/logo.jpg',
+              badge: '/logo.jpg',
+              tag: `order-${newNotification.orderId}`,
+              requireInteraction: false,
+            });
+            n.onclick = () => {
+              window.focus();
+              window.location.href = '/admin/orders';
+              n.close();
+            };
+            setTimeout(() => n.close(), 10000);
+          } catch {}
+        }
+
         // Import toast dynamically to show the notification
         import('react-hot-toast').then(({ default: toast }) => {
           import('lucide-react').then(({ ShoppingBag }) => {
@@ -109,7 +187,7 @@ export function NotificationListener() {
     previousCountRef.current = notifications.length;
   }, [notifications]);
 
-  // Poll backend for new orders and convert to notifications for admin
+  // Polling fallback - only used when WebSocket is disconnected
   useEffect(() => {
     // Load seen order IDs from localStorage
     if (!initializedOrdersPollRef.current) {
@@ -121,6 +199,11 @@ export function NotificationListener() {
         }
       } catch {}
       initializedOrdersPollRef.current = true;
+    }
+
+    // Only poll if WebSocket is not connected
+    if (!usePolling) {
+      return;
     }
 
     let cancelled = false;
@@ -142,6 +225,11 @@ export function NotificationListener() {
           total: o.total_amount ?? o.total ?? 0,
           customer: o.customer_name || o.user?.name || o.customer_phone || o.phone || 'Customer',
           created_at: o.created_at,
+          items: o.items?.map((item: any) => ({
+            meal_name: item.meal_name || item.meal?.name || 'Unknown Item',
+            quantity: item.quantity || 1,
+            price: item.price || item.unit_price || 0,
+          })) || [],
         }));
 
         // On first run, just seed the seen IDs to avoid spamming old notifications
@@ -165,6 +253,7 @@ export function NotificationListener() {
               orderNumber: formatOrderNumber(n.order_number),
               customerName: n.customer,
               total: n.total,
+              items: n.items,
             }, true);
           }
         }
@@ -186,7 +275,7 @@ export function NotificationListener() {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [addNotification]);
+  }, [addNotification, usePolling]); // Re-run when usePolling changes
 
   // This component doesn't render anything
   return null;

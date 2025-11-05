@@ -4,35 +4,86 @@ from app.database import connect_to_mongo, close_mongo_connection
 from app import models, schemas, crud
 import uuid
 
+from beanie import PydanticObjectId
+
+
+async def get_or_create_user(phone: str, email: str, name: str, role: schemas.UserRole, password: str):
+    existing = await models.User.find_one(models.User.phone == phone)
+    if existing:
+        # Ensure verified flag is set for convenience
+        if not getattr(existing, "is_verified", False):
+            existing.is_verified = True
+            await existing.save()
+        return existing
+    user = await crud.crud_user.create(
+        obj_in=schemas.UserCreate(
+            phone=phone,
+            email=email,
+            name=name,
+            role=role,
+            password=password,
+        )
+    )
+    user.is_verified = True
+    await user.save()
+    return user
+
+
+async def get_or_create_category(cat_data: dict):
+    existing = await models.Category.find_one(models.Category.name == cat_data["name"])  # type: ignore[attr-defined]
+    if existing:
+        return existing
+    return await crud.crud_category.create(obj_in=schemas.CategoryCreate(**cat_data))
+
+
+async def get_or_create_ingredient(ing_data: dict):
+    existing = await models.Ingredient.find_one(models.Ingredient.name == ing_data["name"])  # type: ignore[attr-defined]
+    if existing:
+        return existing
+    return await crud.crud_ingredient.create(obj_in=schemas.IngredientCreate(**ing_data))
+
+
+async def get_or_create_meal(meal_data: dict):
+    existing = await models.Meal.find_one(models.Meal.name == meal_data["name"])  # type: ignore[attr-defined]
+    if existing:
+        return existing
+    return await crud.crud_meal.create(obj_in=schemas.MealCreate(**meal_data))
+
+
 async def create_sample_data():
     """Create sample data for MongoDB."""
     try:
         print("Seeding MongoDB database...")
         
         # Create admin user
-        admin_data = schemas.UserCreate(
+        # Default admin
+        admin = await get_or_create_user(
             phone="+1234567890",
             email="admin@moringa.com",
             name="Admin User",
             role=schemas.UserRole.ADMIN,
-            password="admin123"
+            password="admin123",
         )
-        admin = await crud.crud_user.create(obj_in=admin_data)
-        admin.is_verified = True
-        await admin.save()
         print(f"Created admin user: {admin.name}")
+
+        # Test admin used by automated tests / Playwright
+        test_admin = await get_or_create_user(
+            phone="+254712345678",
+            email="testadmin@moringa.com",
+            name="Test Admin",
+            role=schemas.UserRole.ADMIN,
+            password="admin123",
+        )
+        print(f"Ensured test admin user: {test_admin.phone}")
         
         # Create customer user
-        customer_data = schemas.UserCreate(
+        customer = await get_or_create_user(
             phone="+1234567891",
             email="customer@example.com",
             name="John Doe",
             role=schemas.UserRole.CUSTOMER,
-            password="customer123"
+            password="customer123",
         )
-        customer = await crud.crud_user.create(obj_in=customer_data)
-        customer.is_verified = True
-        await customer.save()
         print(f"Created customer user: {customer.name}")
         
         # Create categories
@@ -71,9 +122,7 @@ async def create_sample_data():
         
         categories = []
         for cat_data in categories_data:
-            category = await crud.crud_category.create(
-                obj_in=schemas.CategoryCreate(**cat_data)
-            )
+            category = await get_or_create_category(cat_data)
             categories.append(category)
         print("Created categories")
         
@@ -93,9 +142,7 @@ async def create_sample_data():
         
         ingredients = []
         for ing_data in ingredients_data:
-            ingredient = await crud.crud_ingredient.create(
-                obj_in=schemas.IngredientCreate(**ing_data)
-            )
+            ingredient = await get_or_create_ingredient(ing_data)
             ingredients.append(ingredient)
         print("Created ingredients")
         
@@ -191,9 +238,7 @@ async def create_sample_data():
         
         meals = []
         for meal_data in meals_data:
-            meal = await crud.crud_meal.create(
-                obj_in=schemas.MealCreate(**meal_data)
-            )
+            meal = await get_or_create_meal(meal_data)
             meals.append(meal)
         print("Created meals")
         
@@ -257,19 +302,21 @@ async def create_sample_data():
             }
         ]
         
-        orders = []
-        for order_data in sample_orders:
-            order = await crud.crud_order.create(
-                obj_in=schemas.OrderCreate(**order_data), 
-                user_id=customer.id
-            )
-            # Update first order to PREPARING status
-            if len(orders) == 0:
-                order.status = models.OrderStatus.PREPARING
-                await order.save()
-            orders.append(order)
-        
-        print("Created sample orders")
+        existing_order = await models.Order.find_one(models.Order.user_id == customer.id)  # type: ignore[attr-defined]
+        if not existing_order:
+            orders = []
+            for order_data in sample_orders:
+                order = await crud.crud_order.create(
+                    obj_in=schemas.OrderCreate(**order_data), 
+                    user_id=customer.id
+                )
+                if len(orders) == 0:
+                    order.status = models.OrderStatus.PREPARING
+                    await order.save()
+                orders.append(order)
+            print("Created sample orders")
+        else:
+            print("Sample orders already exist, skipping")
         
         # Create sample coupons
         coupons_data = [
@@ -296,6 +343,9 @@ async def create_sample_data():
         ]
         
         for coupon_data in coupons_data:
+            existing_coupon = await models.Coupon.find_one(models.Coupon.code == coupon_data["code"])  # type: ignore[attr-defined]
+            if existing_coupon:
+                continue
             coupon = models.Coupon(id=str(uuid.uuid4()), **coupon_data)
             await coupon.insert()
         
