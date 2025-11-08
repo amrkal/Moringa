@@ -385,13 +385,13 @@ export default function AdminReviewsPage() {
                     setModerationNotes('');
                     setSelectedReview(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                  className="flex-1 px-4 py-2.5 border-2 border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleModerate(selectedReview.id, moderationAction, moderationNotes)}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${
+                  className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:shadow-lg ${
                     moderationAction === 'REJECTED' 
                       ? 'bg-red-600 hover:bg-red-700' 
                       : 'bg-orange-600 hover:bg-orange-700'
@@ -426,13 +426,13 @@ export default function AdminReviewsPage() {
                     setAdminResponse('');
                     setSelectedReview(null);
                   }}
-                  className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                  className="flex-1 px-4 py-2.5 border-2 border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleRespond(selectedReview.id)}
-                  className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-medium transition-all hover:shadow-lg"
                 >
                   Send Response
                 </button>

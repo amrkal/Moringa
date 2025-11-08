@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export function RootLayoutContent({
   children,
@@ -14,14 +13,17 @@ export function RootLayoutContent({
   const isAdmin = pathname?.startsWith('/admin');
 
   return (
-    <ErrorBoundary>
-      <div className="flex flex-col min-h-screen">
-        <Navigation />
-        <main className={`flex-1 bg-background text-foreground ${isAdmin ? '' : 'pt-16'}`}>
-          {children}
-        </main>
-        <Footer />
-      </div>
-    </ErrorBoundary>
+    <div className="flex flex-col min-h-screen">
+      <Navigation />
+      <main 
+        id="main-content" 
+        className={`flex-1 bg-background text-foreground ${isAdmin ? '' : 'pt-16'}`}
+        role="main"
+        aria-label="Main content"
+      >
+        {children}
+      </main>
+      <Footer />
+    </div>
   );
 }

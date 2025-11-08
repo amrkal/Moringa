@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { formatCurrency } from '@/lib/format';
 import { getLocalizedText } from '@/lib/i18n';
+import { buttonStyles, modalStyles, tabStyles, inputStyles } from '@/lib/styles';
 
 interface Category {
   id: string;
@@ -35,6 +36,12 @@ interface Meal {
   image: string;
   category_id: string;
   is_active: boolean;
+  is_spicy?: boolean;
+  is_popular?: boolean;
+  is_vegetarian?: boolean;
+  is_vegan?: boolean;
+  is_gluten_free?: boolean;
+  is_available?: boolean;
   created_at: string;
   ingredients?: MealIngredientLink[];
 }
@@ -71,12 +78,20 @@ export default function MealsPage() {
     price: '',
     image: '',
     category_id: '',
-    is_active: true
+    is_active: true,
+    is_available: true,
+    is_spicy: false,
+    is_popular: false,
+    is_vegetarian: false,
+    is_vegan: false,
+    is_gluten_free: false
   });
   // selection per ingredient: mode (none|default|extra), removable applies only to default
   const [ingredientSelection, setIngredientSelection] = useState<Record<string, { mode: 'none'|'default'|'extra'; removable: boolean }>>({});
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
+
     fetchMeals();
     fetchCategories();
     fetchIngredients();
@@ -143,6 +158,12 @@ export default function MealsPage() {
       image: formData.image,
       category_id: formData.category_id,
       is_active: formData.is_active,
+      is_available: formData.is_available,
+      is_spicy: formData.is_spicy,
+      is_popular: formData.is_popular,
+      is_vegetarian: formData.is_vegetarian,
+      is_vegan: formData.is_vegan,
+      is_gluten_free: formData.is_gluten_free,
       ingredients
     };
 
@@ -211,7 +232,13 @@ export default function MealsPage() {
         price: meal.price.toString(),
         image: meal.image,
         category_id: meal.category_id,
-        is_active: meal.is_active
+        is_active: meal.is_active,
+        is_available: meal.is_available ?? true,
+        is_spicy: meal.is_spicy ?? false,
+        is_popular: meal.is_popular ?? false,
+        is_vegetarian: meal.is_vegetarian ?? false,
+        is_vegan: meal.is_vegan ?? false,
+        is_gluten_free: meal.is_gluten_free ?? false
       });
       // Load existing ingredient config
       const selection: Record<string, { mode: 'none'|'default'|'extra'; removable: boolean }> = {};
@@ -236,7 +263,13 @@ export default function MealsPage() {
         price: '',
         image: '',
         category_id: '',
-        is_active: true
+        is_active: true,
+        is_available: true,
+        is_spicy: false,
+        is_popular: false,
+        is_vegetarian: false,
+        is_vegan: false,
+        is_gluten_free: false
       });
       setIngredientSelection({});
     }
@@ -259,10 +292,49 @@ export default function MealsPage() {
       price: '',
       image: '',
       category_id: '',
-      is_active: true
+      is_active: true,
+      is_available: true,
+      is_spicy: false,
+      is_popular: false,
+      is_vegetarian: false,
+      is_vegan: false,
+      is_gluten_free: false
     });
     setIngredientSelection({});
     setIngredientSearch('');
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData({ ...formData, image: base64String });
+        setUploadingImage(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image');
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Failed to upload image');
+      setUploadingImage(false);
+    }
   };
 
   const toggleIngredientMode = (ingredientId: string) => {
@@ -342,15 +414,20 @@ export default function MealsPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">{getTranslation('admin', 'mealsManagement', language)}</h1>
+        <div className="flex justify-between items-center pb-5 relative">
+          <div>
+            <h1 className="text-3xl font-bold">{getTranslation('admin', 'mealsManagement', language)}</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage your menu items and ingredients</p>
+          </div>
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            className={buttonStyles.add}
           >
             <Plus size={20} />
             {getTranslation('admin', 'addMeal', language)}
           </button>
+          {/* Gradient accent line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
         </div>
         {/* Filters and sorting */}
         <div className="flex flex-wrap gap-3 items-center bg-card p-4 rounded-lg border border-border">
@@ -395,7 +472,9 @@ export default function MealsPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-lg shadow overflow-hidden">
+        <div className="card-premium overflow-hidden relative">
+          {/* Decorative gradient accent positioned above the table to avoid invalid thead children */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
@@ -456,8 +535,10 @@ export default function MealsPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => toggleActive(meal)}
-                        className={`p-2 rounded ${
-                          meal.is_active ? 'text-accent hover:bg-accent/10' : 'text-primary hover:bg-primary/10'
+                        className={`p-2 rounded-lg border-2 transition-all hover:scale-105 ${
+                          meal.is_active 
+                            ? 'border-orange-500/30 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20' 
+                            : 'border-green-500/30 bg-green-500/10 text-green-600 hover:bg-green-500/20'
                         }`}
                         title={meal.is_active ? getTranslation('admin', 'deactivate', language) : getTranslation('admin', 'activate', language)}
                       >
@@ -465,14 +546,14 @@ export default function MealsPage() {
                       </button>
                       <button
                         onClick={() => openModal(meal)}
-                        className="text-primary hover:bg-primary/10 p-2 rounded"
+                        className="p-2 rounded-lg border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-all hover:scale-105"
                         title={getTranslation('common', 'edit', language)}
                       >
                         <Pencil size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(meal.id)}
-                        className="text-destructive hover:bg-destructive/10 p-2 rounded"
+                        className="p-2 rounded-lg border-2 border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-all hover:scale-105"
                         title={getTranslation('admin', 'delete', language)}
                       >
                         <Trash2 size={18} />
@@ -487,57 +568,51 @@ export default function MealsPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn overflow-y-auto">
-          <div className="bg-card rounded-2xl max-w-2xl w-full shadow-2xl animate-slideUp my-8 max-h-[90vh] overflow-hidden flex flex-col">
+        <div 
+          className={modalStyles.backdrop}
+          onClick={closeModal}
+        >
+          <div 
+            className={modalStyles.cardLarge}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+            <div className={modalStyles.header}>
               <h2 className="text-2xl font-bold text-foreground">
                 {editingMeal ? getTranslation('admin', 'editMeal', language) : getTranslation('admin', 'newMeal', language)}
               </h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className={modalStyles.closeButton}
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Modal Body - Scrollable */}
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-              <div className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className={modalStyles.body}>
               {/* Language Tabs */}
-              <div className="flex border-b border-border">
+              <div className={tabStyles.container}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'en'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={activeTab === 'en' ? tabStyles.active : tabStyles.inactive}
                 >
                   English
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('ar')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'ar'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={activeTab === 'ar' ? tabStyles.active : tabStyles.inactive}
                 >
                   العربية
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('he')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'he'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
+                  className={activeTab === 'he' ? tabStyles.active : tabStyles.inactive}
                 >
                   עברית
                 </button>
@@ -645,7 +720,7 @@ export default function MealsPage() {
                 <select
                   value={formData.category_id}
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground"
+                  className={inputStyles.select}
                   required
                 >
                   <option value="">{getTranslation('admin', 'selectCategory', language)}</option>
@@ -671,15 +746,57 @@ export default function MealsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  {getTranslation('admin', 'imageUrl', language)}
+                  {getTranslation('admin', 'imageUrl', language)} or Upload
                 </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                  required
-                />
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={formData.image && !formData.image.startsWith('data:') ? formData.image : ''}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="meal-image-upload"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="meal-image-upload"
+                      className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-border rounded-xl hover:border-primary transition-all cursor-pointer ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          <span className="text-sm text-muted-foreground">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm text-muted-foreground">Click to upload image (max 5MB)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  {formData.image && (
+                    <div className="mt-3 p-2 bg-muted/30 rounded-xl">
+                      <img
+                        src={formData.image}
+                        alt="Preview"
+                        className="w-full h-40 object-cover rounded-lg shadow-sm"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Ingredients Section */}
@@ -717,12 +834,12 @@ export default function MealsPage() {
                           <button
                             type="button"
                             onClick={() => toggleIngredientMode(ingredient.id)}
-                            className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                            className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 transition-all hover:scale-105 ${
                               config.mode === 'none'
-                                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                ? 'border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 : config.mode === 'default'
-                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
-                                : 'bg-primary/10 text-primary hover:bg-primary/20'
+                                ? 'border-primary/30 bg-primary/20 text-primary hover:bg-primary/30'
+                                : 'border-purple-500/30 bg-purple-500/10 text-purple-600 hover:bg-purple-500/20'
                             }`}
                           >
                             {config.mode === 'none' && getTranslation('admin', 'notIncluded', language)}
@@ -733,10 +850,10 @@ export default function MealsPage() {
                             <button
                               type="button"
                               onClick={() => toggleRemovable(ingredient.id)}
-                              className={`px-2 py-1 text-xs font-medium rounded ${
+                              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border-2 transition-all hover:scale-105 ${
                                 config.removable
-                                  ? 'bg-accent/20 text-accent hover:bg-accent/30'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                  ? 'border-orange-500/30 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'
+                                  : 'border-gray-400/30 bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                               title={config.removable ? getTranslation('admin', 'userCanRemove', language) : getTranslation('admin', 'requiredCannotRemove', language)}
                             >
@@ -753,40 +870,69 @@ export default function MealsPage() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
-                <div>
-                  <label htmlFor="is_active" className="font-medium text-foreground">
-                    {getTranslation('admin', 'activeStatus', language)}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_spicy}
+                      onChange={e => setFormData({ ...formData, is_spicy: e.target.checked })}
+                      className="accent-red-500 w-5 h-5"
+                    />
+                    <span className="text-foreground font-medium">Spicy 🌶️</span>
                   </label>
-                  <p className="text-sm text-muted-foreground">
-                    {getTranslation('admin', 'activeStatusMealHelp', language)}
-                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_popular}
+                      onChange={e => setFormData({ ...formData, is_popular: e.target.checked })}
+                      className="accent-yellow-400 w-5 h-5"
+                    />
+                    <span className="text-foreground font-medium">Popular ⭐</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_vegetarian}
+                      onChange={e => setFormData({ ...formData, is_vegetarian: e.target.checked })}
+                      className="accent-green-600 w-5 h-5"
+                    />
+                    <span className="text-foreground font-medium">Vegetarian</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_vegan}
+                      onChange={e => setFormData({ ...formData, is_vegan: e.target.checked })}
+                      className="accent-emerald-600 w-5 h-5"
+                    />
+                    <span className="text-foreground font-medium">Vegan</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_gluten_free}
+                      onChange={e => setFormData({ ...formData, is_gluten_free: e.target.checked })}
+                      className="accent-sky-600 w-5 h-5"
+                    />
+                    <span className="text-foreground font-medium">Gluten‑free</span>
+                  </label>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-[hsl(var(--background))] after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                </label>
               </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-6 border-t border-border flex gap-3 flex-shrink-0">
+              {/* Modal Footer - Fixed at bottom */}
+              <div className={modalStyles.footer}>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2.5 border border-border rounded-xl text-foreground hover:bg-muted transition-all font-medium"
+                  className={`${buttonStyles.secondary} flex-1`}
                 >
                   {getTranslation('admin', 'cancel', language)}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-medium shadow-sm hover:shadow"
+                  className={`${buttonStyles.primary} flex-1`}
                 >
                   {editingMeal ? getTranslation('admin', 'updateMeal', language) : getTranslation('admin', 'createMeal', language)}
                 </button>

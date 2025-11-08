@@ -122,6 +122,7 @@ class Meal(Document):
     is_vegan: bool = False
     is_gluten_free: bool = False
     is_spicy: bool = False
+    is_popular: bool = False
     spice_level: Optional[int] = None  # 1-5 scale
     is_active: bool = True
     is_available: bool = True

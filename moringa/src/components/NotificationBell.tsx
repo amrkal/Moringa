@@ -104,11 +104,16 @@ export function NotificationBell() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2.5 rounded-xl hover:bg-muted transition-all hover:scale-110"
-        aria-label="Notifications"
+        aria-label={`Notifications${unreadCount > 0 ? ` - ${unreadCount} unread` : ''}`}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
       >
-        <Bell size={22} className="text-foreground" strokeWidth={2} />
+        <Bell size={22} className="text-foreground" strokeWidth={2} aria-hidden="true" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+          <span 
+            className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse"
+            aria-label={`${unreadCount} unread notifications`}
+          >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -117,16 +122,22 @@ export function NotificationBell() {
       {/* Dropdown Panel */}
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - Click outside to close */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[60]"
             onClick={() => setIsOpen(false)}
+            aria-hidden="true"
           />
 
           {/* Panel */}
-          <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-top-4 duration-200">
+          <div 
+            className="absolute right-0 mt-2 w-96 bg-[hsl(var(--card))] border border-border rounded-2xl shadow-2xl z-[70] animate-in slide-in-from-top-4 duration-200"
+            role="dialog"
+            aria-label="Notification panel"
+            aria-modal="false"
+          >
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800 space-y-3">
+            <div className="p-4 border-b border-border bg-muted space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Order Notifications</h3>
@@ -138,13 +149,14 @@ export function NotificationBell() {
                   {/* Sound Toggle */}
                   <button
                     onClick={toggleSound}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
-                    title={soundEnabled ? 'Disable sound' : 'Enable sound'}
+                    className="p-2 rounded-lg hover:bg-muted transition-colors"
+                    aria-label={soundEnabled ? 'Disable notification sound' : 'Enable notification sound'}
+                    aria-pressed={soundEnabled}
                   >
                     {soundEnabled ? (
-                      <Volume2 size={18} className="text-primary" />
+                      <Volume2 size={18} className="text-primary" aria-hidden="true" />
                     ) : (
-                      <VolumeX size={18} className="text-muted-foreground" />
+                      <VolumeX size={18} className="text-muted-foreground" aria-hidden="true" />
                     )}
                   </button>
                   {notifications.length > 0 && (
@@ -160,9 +172,12 @@ export function NotificationBell() {
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex gap-1 bg-white dark:bg-neutral-900 rounded-lg p-1">
+              <div className="flex gap-1 bg-background rounded-lg p-1" role="tablist" aria-label="Filter notifications">
                 <button
                   onClick={() => setFilter('all')}
+                  role="tab"
+                  aria-selected={filter === 'all'}
+                  aria-controls="notifications-list"
                   className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     filter === 'all' 
                       ? 'bg-primary text-primary-foreground' 
@@ -173,6 +188,9 @@ export function NotificationBell() {
                 </button>
                 <button
                   onClick={() => setFilter('today')}
+                  role="tab"
+                  aria-selected={filter === 'today'}
+                  aria-controls="notifications-list"
                   className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     filter === 'today' 
                       ? 'bg-primary text-primary-foreground' 
@@ -183,6 +201,9 @@ export function NotificationBell() {
                 </button>
                 <button
                   onClick={() => setFilter('week')}
+                  role="tab"
+                  aria-selected={filter === 'week'}
+                  aria-controls="notifications-list"
                   className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     filter === 'week' 
                       ? 'bg-primary text-primary-foreground' 
@@ -195,10 +216,15 @@ export function NotificationBell() {
             </div>
 
             {/* Notifications List */}
-            <div className="max-h-96 overflow-y-auto">
+            <div 
+              className="max-h-96 overflow-y-auto"
+              id="notifications-list"
+              role="tabpanel"
+              aria-label="Notification list"
+            >
               {filtered.length === 0 ? (
-                <div className="p-8 text-center">
-                  <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-3" strokeWidth={1.5} />
+                <div className="p-8 text-center" role="status">
+                  <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-3" strokeWidth={1.5} aria-hidden="true" />
                   <p className="text-sm text-muted-foreground">
                     {filter === 'all' ? 'No notifications yet' : `No notifications ${filter === 'today' ? 'today' : 'this week'}`}
                   </p>
@@ -207,7 +233,7 @@ export function NotificationBell() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 dark:divide-neutral-800">
+                <div className="divide-y divide-border">
                   {filtered.map((notification) => (
                     <div
                       key={notification.id}
@@ -265,24 +291,24 @@ export function NotificationBell() {
                                 <button
                                   onClick={() => markAsRead(notification.id)}
                                   className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-600 transition-all"
-                                  title="Mark as read"
+                                  aria-label="Mark as read"
                                 >
-                                  <Eye size={14} />
+                                  <Eye size={14} aria-hidden="true" />
                                 </button>
                               )}
                               <button
                                 onClick={() => clearNotification(notification.id)}
                                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-600 transition-all"
-                                title="Remove"
+                                aria-label="Remove notification"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={14} aria-hidden="true" />
                               </button>
                             </div>
                           </div>
 
                           {/* Order Items */}
                           {notification.items && notification.items.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-neutral-700">
+                            <div className="mt-3 pt-3 border-t border-border">
                               <button
                                 onClick={() => toggleNotificationExpand(notification.id)}
                                 className="flex items-center justify-between w-full text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mb-2"
@@ -312,29 +338,32 @@ export function NotificationBell() {
                           )}
 
                           {/* Quick Actions */}
-                          <div className="flex items-center gap-2 mt-3">
+                          <div className="flex items-center gap-2 mt-3" role="group" aria-label="Quick actions">
                             <button
                               onClick={() => updateOrderStatus(notification.orderId, 'CONFIRMED')}
                               disabled={updatingOrderId === notification.orderId}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                              aria-label="Confirm order"
+                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-green-500/10 text-green-700 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
                             >
-                              <CheckCircle size={14} />
+                              <CheckCircle size={14} aria-hidden="true" />
                               Confirm
                             </button>
                             <button
                               onClick={() => updateOrderStatus(notification.orderId, 'PREPARING')}
                               disabled={updatingOrderId === notification.orderId}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-500/20 transition-colors disabled:opacity-50"
+                              aria-label="Mark order as preparing"
+                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-purple-500/10 text-purple-700 rounded-lg hover:bg-purple-500/20 transition-colors disabled:opacity-50"
                             >
-                              <Clock size={14} />
+                              <Clock size={14} aria-hidden="true" />
                               Preparing
                             </button>
                             <button
                               onClick={() => updateOrderStatus(notification.orderId, 'READY')}
                               disabled={updatingOrderId === notification.orderId}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                              aria-label="Mark order as ready"
+                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium bg-blue-500/10 text-blue-700 rounded-lg hover:bg-blue-500/20 transition-colors disabled:opacity-50"
                             >
-                              <CheckCircle size={14} />
+                              <CheckCircle size={14} aria-hidden="true" />
                               Ready
                             </button>
                           </div>
@@ -348,7 +377,7 @@ export function NotificationBell() {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="p-3 border-t border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800">
+              <div className="p-3 border-t border-border bg-muted">
                 <Link
                   href="/admin/orders"
                   className="block text-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"

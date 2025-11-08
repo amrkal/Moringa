@@ -1,0 +1,143 @@
+/**
+ * Enhanced Keyboard Focus Styles
+ * 
+ * Provides clear visual indicators for keyboard navigation
+ * while maintaining a modern, cohesive design.
+ */
+
+/* Remove default outline and add custom focus styles */
+*:focus {
+  outline: none;
+}
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Enhanced focus for interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="menuitem"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.1);
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Primary button focus */
+button.bg-primary:focus-visible,
+.bg-gradient-to-br:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.2), 0 4px 12px hsl(var(--primary) / 0.3);
+}
+
+/* Card/Modal focus */
+[role="dialog"]:focus-within {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3);
+}
+
+/* Navigation links focus */
+nav a:focus-visible,
+nav button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 4px;
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+/* Skip link special styling */
+.sr-only:focus {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 9999;
+  width: auto;
+  height: auto;
+  padding: 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  font-weight: 600;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Table focus */
+table tr:focus-within {
+  background-color: hsl(var(--muted) / 0.3);
+  outline: 1px solid hsl(var(--ring) / 0.5);
+}
+
+/* Form input focus enhancement */
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="tel"]:focus-visible,
+input[type="url"]:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 0;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.1);
+}
+
+/* Checkbox and radio focus */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.15);
+}
+
+/* Tab focus for accessibility */
+[role="tab"]:focus-visible {
+  position: relative;
+  z-index: 10;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+/* Modal close button focus */
+[aria-label*="Close"]:focus-visible,
+[aria-label*="close"]:focus-visible {
+  outline: 2px solid hsl(var(--destructive));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--destructive) / 0.1);
+}
+
+/* Dropdown menu focus */
+[role="menu"] [role="menuitem"]:focus-visible,
+[role="listbox"] [role="option"]:focus-visible {
+  background-color: hsl(var(--muted));
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+/* Card button focus */
+.group:focus-within {
+  transform: scale(1.02);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Notification badge - don't show focus */
+[aria-label*="items in cart"]:focus,
+[aria-label*="unread notifications"]:focus {
+  outline: none;
+  box-shadow: none;
+}

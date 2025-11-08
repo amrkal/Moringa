@@ -133,19 +133,23 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Save notifications to localStorage whenever they change + auto-archive old ones
   useEffect(() => {
+    // Auto-archive notifications older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const recent = notifications.filter(n => new Date(n.timestamp) >= sevenDaysAgo);
+    
+    // Only update if we actually removed some
+    if (recent.length !== notifications.length) {
+      setNotifications(recent);
+      return; // Let the next effect call handle storage
+    }
+    
+    // Save to localStorage (including empty array)
     if (notifications.length > 0) {
-      // Auto-archive notifications older than 7 days
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const recent = notifications.filter(n => new Date(n.timestamp) >= sevenDaysAgo);
-      
-      // Only update if we actually removed some
-      if (recent.length !== notifications.length) {
-        setNotifications(recent);
-      }
-      
-      localStorage.setItem('orderNotifications', JSON.stringify(recent));
+      localStorage.setItem('orderNotifications', JSON.stringify(notifications));
+    } else {
+      localStorage.removeItem('orderNotifications');
     }
   }, [notifications]);
 

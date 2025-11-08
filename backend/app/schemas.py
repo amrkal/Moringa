@@ -67,6 +67,7 @@ class IngredientBase(BaseModel):
     name: dict  # {"en": "...", "ar": "...", "he": "..."}
     description: dict = {"en": "", "ar": "", "he": ""}
     price: float = 0.0
+    image: Optional[str] = None
     is_active: bool = True
 
 class IngredientCreate(IngredientBase):
@@ -76,6 +77,7 @@ class IngredientUpdate(BaseModel):
     name: Optional[dict] = None
     description: Optional[dict] = None
     price: Optional[float] = None
+    image: Optional[str] = None
     is_active: Optional[bool] = None
 
 class Ingredient(IngredientBase):
@@ -113,7 +115,14 @@ class MealBase(BaseModel):
     description: dict = {"en": "", "ar": "", "he": ""}
     price: float
     image: Optional[str] = None
+    # Dietary and attributes
+    is_vegetarian: bool = False
+    is_vegan: bool = False
+    is_gluten_free: bool = False
+    is_spicy: bool = False
+    is_popular: bool = False
     is_active: bool = True
+    is_available: bool = True
     category_id: str
 
 class MealCreate(MealBase):
@@ -124,7 +133,13 @@ class MealUpdate(BaseModel):
     description: Optional[dict] = None
     price: Optional[float] = None
     image: Optional[str] = None
+    is_vegetarian: Optional[bool] = None
+    is_vegan: Optional[bool] = None
+    is_gluten_free: Optional[bool] = None
+    is_spicy: Optional[bool] = None
+    is_popular: Optional[bool] = None
     is_active: Optional[bool] = None
+    is_available: Optional[bool] = None
     category_id: Optional[str] = None
     ingredients: Optional[List[MealIngredientCreate]] = None
 

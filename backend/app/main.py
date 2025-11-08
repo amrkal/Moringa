@@ -6,8 +6,9 @@ from .config import settings
 from .database import connect_to_mongo, close_mongo_connection, get_database
 
 # Import routers
-from .routers import categories, meals, ingredients, auth, orders, users, websocket, analytics, reviews
+from .routers import categories, meals, ingredients, auth, orders, users, websocket, analytics, reviews, payments
 from .routers import settings as settings_router
+from .routers import mpesa
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +51,8 @@ app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews"])
 app.include_router(settings_router.router, prefix="/api/v1/settings", tags=["Settings"])
 app.include_router(websocket.router, prefix="/api/v1", tags=["WebSocket"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(payments.router, prefix="/api/v1", tags=["Payments"])
+app.include_router(mpesa.router, prefix="/api/v1", tags=["M-Pesa"])
 
 @app.get("/")
 async def read_root():

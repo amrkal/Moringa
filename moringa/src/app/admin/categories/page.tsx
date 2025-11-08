@@ -8,6 +8,9 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { getLocalizedText } from '@/lib/i18n';
+import { buttonStyles, modalStyles, tabStyles, inputStyles } from '@/lib/styles';
+import { TableSkeleton } from '@/components/ui/skeleton';
+import { ButtonSpinner } from '@/components/ui/spinner';
 
 interface Category {
   id: string;
@@ -44,6 +47,7 @@ export default function CategoriesPage() {
     image: '',
     is_active: true
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -158,6 +162,42 @@ export default function CategoriesPage() {
     setFormData({ name: '', name_en: '', name_ar: '', name_he: '', description: '', description_en: '', description_ar: '', description_he: '', image: '', is_active: true });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData({ ...formData, image: base64String });
+        setUploadingImage(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image');
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Failed to upload image');
+      setUploadingImage(false);
+    }
+  };
+
   const filteredCategories = categories.filter(category => {
     const name = typeof category.name === 'string' 
       ? category.name 
@@ -174,20 +214,27 @@ export default function CategoriesPage() {
       <Toaster position="top-right" />
       
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8 pb-5 relative">
         <h1 className="text-4xl font-bold text-foreground tracking-tight">{getTranslation('admin', 'categories', language)}</h1>
         <p className="mt-2 text-muted-foreground">{getTranslation('admin', 'manageCategoriesSubtitle', language)} • {categories.length} {categories.length === 1 ? 'category' : 'categories'}</p>
+        {/* Gradient accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
       </div>
 
       {/* Actions Bar */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+          <label htmlFor="search-categories" className="sr-only">
+            {getTranslation('admin', 'searchCategories', language)}
+          </label>
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} aria-hidden="true" />
           <input
+            id="search-categories"
             type="text"
             placeholder={getTranslation('admin', 'searchCategories', language)}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label={getTranslation('admin', 'searchCategories', language)}
             className="w-full pl-10 pr-4 py-3 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground shadow-sm"
           />
           {searchTerm && (
@@ -200,7 +247,7 @@ export default function CategoriesPage() {
         </div>
         <button
           onClick={openModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg hover:shadow-xl font-medium"
+          className={buttonStyles.add}
         >
           <Plus size={20} strokeWidth={2.5} />
           {getTranslation('admin', 'addCategory', language)}
@@ -241,7 +288,7 @@ export default function CategoriesPage() {
             {!searchTerm && (
               <button
                 onClick={openModal}
-                className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+                className={`mt-4 ${buttonStyles.add}`}
               >
                 <Plus size={20} />
                 {getTranslation('admin', 'addCategory', language)}
@@ -297,14 +344,21 @@ export default function CategoriesPage() {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => handleEdit(category)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/10 text-blue-600 rounded-xl hover:bg-blue-500/20 transition-all font-medium hover:scale-105"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 rounded-xl hover:bg-blue-500/20 transition-all font-medium hover:scale-105"
                   >
                     <Edit size={16} />
                     {getTranslation('common', 'edit', language)}
                   </button>
                   <button
+                    onClick={() => toggleActive(category)}
+                    className={category.is_active ? buttonStyles.tableToggleActive : buttonStyles.tableToggleInactive}
+                    title={category.is_active ? 'Deactivate' : 'Activate'}
+                  >
+                    {category.is_active ? <Eye size={18} /> : <EyeOff size={18} />}
+                  </button>
+                  <button
                     onClick={() => handleDelete(category.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 text-red-600 rounded-xl hover:bg-red-500/20 transition-all font-medium hover:scale-105"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-red-500/30 bg-red-500/10 text-red-600 rounded-xl hover:bg-red-500/20 transition-all font-medium hover:scale-105"
                   >
                     <Trash2 size={16} />
                     {getTranslation('admin', 'delete', language)}
@@ -318,15 +372,24 @@ export default function CategoriesPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+        <div 
+          className={modalStyles.backdrop}
+          onClick={closeModal}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="category-modal-title"
+        >
           <div 
-            className="bg-card rounded-3xl max-w-2xl w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300"
+            className={modalStyles.card}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+            <div className={modalStyles.header}>
               <div>
-                <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                <h2 
+                  id="category-modal-title"
+                  className="text-2xl font-bold text-foreground tracking-tight"
+                >
                   {editingCategory ? getTranslation('admin', 'editCategory', language) : getTranslation('admin', 'newCategory', language)}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -335,46 +398,46 @@ export default function CategoriesPage() {
               </div>
               <button
                 onClick={closeModal}
-                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
+                className={modalStyles.closeButton}
+                type="button"
+                aria-label="Close modal"
               >
-                <X size={20} />
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Modal Body - Scrollable */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className={modalStyles.body}>
               {/* Language Tabs */}
-              <div className="flex gap-1 p-1 bg-muted rounded-xl">
+              <div className={tabStyles.container} role="tablist" aria-label="Language selection">
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'en'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  role="tab"
+                  aria-selected={activeTab === 'en'}
+                  aria-controls="language-panel-en"
+                  className={activeTab === 'en' ? tabStyles.active : tabStyles.inactive}
                 >
                   English
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('ar')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'ar'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  role="tab"
+                  aria-selected={activeTab === 'ar'}
+                  aria-controls="language-panel-ar"
+                  className={activeTab === 'ar' ? tabStyles.active : tabStyles.inactive}
                 >
                   العربية
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('he')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'he'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  role="tab"
+                  aria-selected={activeTab === 'he'}
+                  aria-controls="language-panel-he"
+                  className={activeTab === 'he' ? tabStyles.active : tabStyles.inactive}
                 >
                   עברית
                 </button>
@@ -382,34 +445,38 @@ export default function CategoriesPage() {
 
               {/* English Tab */}
               {activeTab === 'en' && (
-                <>
+                <div role="tabpanel" id="language-panel-en" aria-labelledby="tab-en">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label htmlFor="category-name-en" className="block text-sm font-medium text-foreground mb-2">
                       {getTranslation('admin', 'englishName', language)} *
                     </label>
                     <input
+                      id="category-name-en"
                       type="text"
                       value={formData.name_en}
                       onChange={(e) => setFormData({ ...formData, name_en: e.target.value, name: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="Category name in English"
                       required
+                      aria-required="true"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label htmlFor="category-description-en" className="block text-sm font-medium text-foreground mb-2">
                       {getTranslation('admin', 'englishDescription', language)} *
                     </label>
                     <textarea
+                      id="category-description-en"
                       value={formData.description_en}
                       onChange={(e) => setFormData({ ...formData, description_en: e.target.value, description: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all resize-none bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="Description in English..."
                       rows={3}
                       required
+                      aria-required="true"
                     />
                   </div>
-                </>
+                </div>
               )}
 
               {/* Arabic Tab */}
@@ -423,7 +490,7 @@ export default function CategoriesPage() {
                       type="text"
                       value={formData.name_ar}
                       onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="الاسم بالعربية"
                       dir="rtl"
                     />
@@ -435,7 +502,7 @@ export default function CategoriesPage() {
                     <textarea
                       value={formData.description_ar}
                       onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all resize-none bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="الوصف بالعربية..."
                       rows={3}
                       dir="rtl"
@@ -455,7 +522,7 @@ export default function CategoriesPage() {
                       type="text"
                       value={formData.name_he}
                       onChange={(e) => setFormData({ ...formData, name_he: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="שם בעברית"
                       dir="rtl"
                     />
@@ -467,7 +534,7 @@ export default function CategoriesPage() {
                     <textarea
                       value={formData.description_he}
                       onChange={(e) => setFormData({ ...formData, description_he: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none bg-card text-foreground placeholder:text-muted-foreground"
+                      className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all resize-none bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))]"
                       placeholder="תיאור בעברית..."
                       rows={3}
                       dir="rtl"
@@ -478,15 +545,45 @@ export default function CategoriesPage() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  {getTranslation('admin', 'imageUrl', language)}
+                  {getTranslation('admin', 'imageUrl', language)} or Upload
                 </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={formData.image && !formData.image.startsWith('data:') ? formData.image : ''}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="category-image-upload"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="category-image-upload"
+                      className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-border rounded-xl hover:border-primary transition-all cursor-pointer ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          <span className="text-sm text-muted-foreground">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm text-muted-foreground">Click to upload image (max 5MB)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
                 {formData.image && (
                   <div className="mt-4 p-2 bg-muted/30 rounded-xl">
                     <img
@@ -501,32 +598,20 @@ export default function CategoriesPage() {
                   </div>
                 )}
               </div>
-
-              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
-                  {getTranslation('admin', 'activeVisibleCustomers', language)}
-                </label>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
+              {/* Modal Footer - Fixed at bottom */}
+              <div className={modalStyles.footer}>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.secondary} flex-1`}
                 >
                   {getTranslation('admin', 'cancel', language)}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.primary} flex-1`}
                 >
                   {editingCategory ? getTranslation('admin', 'update', language) : getTranslation('admin', 'create', language)}
                 </button>

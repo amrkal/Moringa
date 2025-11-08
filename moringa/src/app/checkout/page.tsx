@@ -11,14 +11,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatPrice } from '@/lib/utils';
-import { ArrowLeft, CreditCard, Truck, Store, Users, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, Store, Users, ShoppingBag, Check } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { ButtonSpinner } from '@/components/ui/spinner';
+import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/contexts/AuthContext';
 import PhoneVerification from '@/components/PhoneVerification';
 import api from '@/lib/api';
 import { useNotifications } from '@/contexts/NotificationContext';
+
+// Dynamically import Stripe payment component (client-side only)
+const StripePayment = dynamic(() => import('@/components/StripePayment'), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div></div>
+});
+const MPesaPayment = dynamic(() => import('@/components/MPesaPayment'), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center"><div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div></div>
+});
 
 type OrderType = 'DELIVERY' | 'DINE_IN' | 'TAKEAWAY';
 type PaymentMethod = 'CASH' | 'CARD' | 'WALLET';
@@ -33,6 +45,7 @@ interface Settings {
 }
 
 export default function CheckoutPage() {
+  const enableStripe = process.env.NEXT_PUBLIC_ENABLE_STRIPE !== 'false';
   const router = useRouter();
   const { language } = useLanguage();
   const { isAuthenticated, user, verifyPhone } = useAuth();
@@ -52,6 +65,9 @@ export default function CheckoutPage() {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [showStripePayment, setShowStripePayment] = useState(false);
+  const [showMpesaPayment, setShowMpesaPayment] = useState(false);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -99,22 +115,27 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="max-w-md mx-auto text-center">
-          <div className="relative w-32 h-32 mx-auto mb-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 rounded-full blur-2xl animate-pulse" />
-            <div className="relative w-full h-full bg-gradient-to-br from-muted to-accent/10 rounded-full flex items-center justify-center shadow-xl">
-              <ShoppingBag className="h-16 w-16 text-muted-foreground" />
+      <div className="min-h-screen bg-background flex items-center justify-center px-2 sm:px-4 relative overflow-hidden">
+        {/* Subtle animated background for modern feel */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-1/3 left-1/4 w-60 h-60 sm:w-96 sm:h-96 bg-primary/10 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+          <div className="absolute bottom-1/3 right-1/4 w-60 h-60 sm:w-96 sm:h-96 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+        </div>
+        <div className="max-w-md w-full mx-auto text-center">
+          <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-xl opacity-20 animate-pulse"></div>
+            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-muted to-accent/20 flex items-center justify-center ring-2 ring-primary/10">
+              <ShoppingBag className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 sm:mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {getTranslation('common', 'emptyCart', language)}
           </h1>
-          <p className="text-muted-foreground mb-8">
+          <p className="text-muted-foreground text-base sm:text-lg mb-6 sm:mb-8 leading-relaxed">
             {getTranslation('common', 'startShopping', language)}
           </p>
           <Link href="/menu">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all px-8">
+            <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all px-6 sm:px-8">
               <ShoppingBag className="mr-2 h-5 w-5" />
               {getTranslation('common', 'menu', language)}
             </Button>
@@ -178,9 +199,13 @@ export default function CheckoutPage() {
 
       console.log('[Checkout] Fixed items:', fixedItems.map(it => ({ mealId: it.mealId, name: it.meal.name, type: typeof it.meal.name })));
 
+      // Business rule: only Delivery + Card requires online payment; Dine-in/Takeaway are no-prepay.
+      const normalizedPaymentMethod: 'CASH' | 'CARD' | 'MOBILE_MONEY' =
+        orderType === 'DELIVERY' ? mapPaymentMethod(paymentMethod) : 'CASH';
+
       const payload = {
         order_type: mapOrderType(orderType),
-        payment_method: mapPaymentMethod(paymentMethod),
+        payment_method: normalizedPaymentMethod,
         delivery_address: orderType === 'DELIVERY' ? deliveryAddress : undefined,
         phone_number: user?.phone || '',
         special_instructions: specialInstructions || undefined,
@@ -224,6 +249,26 @@ export default function CheckoutPage() {
       const res = await api.post('/orders', cleanPayload);
       if (res.status >= 200 && res.status < 300) {
         const orderData = res.data;
+        const orderId = orderData.id || orderData._id;
+        
+        // Require online payment ONLY for Delivery + Card
+        const requiresStripe = orderType === 'DELIVERY' && paymentMethod === 'CARD' && enableStripe;
+        if (requiresStripe) {
+          setPendingOrderId(orderId);
+          setShowStripePayment(true);
+          setIsSubmitting(false);
+          return; // Don't clear cart yet, wait for payment completion
+        }
+        
+        // For Delivery + Wallet, open MPesa modal
+        if (orderType === 'DELIVERY' && paymentMethod === 'WALLET') {
+          setPendingOrderId(orderId);
+          setShowMpesaPayment(true);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // For CASH or WALLET, complete the order immediately
         toast.success('Order placed successfully!');
         
         // Trigger notification for admin - show only trailing numeric digits (up to 6)
@@ -250,8 +295,13 @@ export default function CheckoutPage() {
       } else {
         throw new Error('Failed to place order');
       }
-    } catch (error) {
-      toast.error('Failed to place order. Please try again.');
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        toast.error('Please sign in and verify your phone to place an order.');
+        setShowVerification(true);
+      } else {
+        toast.error('Failed to place order. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -266,14 +316,50 @@ export default function CheckoutPage() {
       return;
     }
 
-    // If not authenticated, show verification popup
-    if (!isAuthenticated) {
+    // Check authentication FIRST before doing anything else
+    if (!isAuthenticated || !user?.phone) {
+      toast.error(getTranslation('common', 'pleaseVerifyPhone', language) || 'Please verify your phone number');
       setShowVerification(true);
       return;
     }
 
-    // Place the order
-    await placeOrder();
+    // Place the order (skip auth check since we already verified above)
+    await placeOrder(true);
+  };
+
+
+  const handlePaymentSuccess = () => {
+    toast.success('Payment successful!');
+    clearCart();
+    setShowStripePayment(false);
+    router.push('/orders?payment=success');
+  };
+
+  const handlePaymentFail = (error: string) => {
+    setShowStripePayment(false);
+    setPendingOrderId(null);
+    toast.error(error || 'Payment verification failed. Please try again.');
+  };
+
+  const handlePaymentCancel = () => {
+    setShowStripePayment(false);
+    setPendingOrderId(null);
+    toast('Payment cancelled. You can try again or choose a different payment method.', {
+      icon: 'ℹ️',
+    });
+  };
+
+  const handleMpesaSuccess = () => {
+    toast.success('Payment successful!');
+    clearCart();
+    setShowMpesaPayment(false);
+    router.push('/orders?payment=success');
+  };
+
+  const handleMpesaCancel = () => {
+    setShowMpesaPayment(false);
+    setPendingOrderId(null);
+    toast('M-Pesa payment cancelled. You can try again or choose a different payment method.', { icon: 'ℹ️' });
   };
 
   const handleVerified = async (phone: string) => {
@@ -295,32 +381,65 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir={language === 'ar' || language === 'he' ? 'rtl' : 'ltr'}>
-  <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-background relative overflow-hidden" dir={language === 'ar' || language === 'he' ? 'rtl' : 'ltr'}>
+      {/* Premium animated background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-accent/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+      </div>
+
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-full">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-8">
             <Link href="/cart">
-              <Button variant="ghost" className="mb-4 hover:bg-accent rounded-xl">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="mb-3 sm:mb-4 hover:bg-accent rounded-xl min-h-[44px] px-3 sm:px-4 text-base sm:text-lg">
+                <ArrowLeft className="mr-2 h-5 w-5 sm:h-4 sm:w-4" />
                 {getTranslation('common', 'cart', language)}
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-foreground">{getTranslation('common', 'checkout', language)}</h1>
-            <p className="text-muted-foreground mt-2">Complete your order in a few easy steps</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1 sm:mb-2">
+              {getTranslation('common', 'checkout', language)}
+            </h1>
+            <p className="text-muted-foreground text-xs sm:text-base">Complete your order in a few easy steps</p>
+
+            {/* Step indicator */}
+            <div className="mt-4 sm:mt-6">
+              <div className="relative flex items-center justify-between max-w-xs sm:max-w-md mx-auto">
+                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -z-10"></div>
+                {[
+                  { key: 'Cart', active: false, done: true },
+                  { key: 'Details', active: true, done: false },
+                  { key: 'Confirm', active: false, done: false },
+                ].map((step, idx) => (
+                  <div key={step.key} className="flex flex-col items-center gap-2 w-1/3">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                      step.active
+                        ? 'bg-gradient-to-br from-primary to-accent border-primary text-white scale-105 shadow-md'
+                        : step.done
+                        ? 'bg-primary/10 border-primary/20 text-primary'
+                        : 'bg-background border-border text-muted-foreground'
+                    }`}>
+                      <span className="text-xs sm:text-sm font-bold">{idx + 1}</span>
+                    </div>
+                    <span className={`text-xs sm:text-sm ${step.active ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>{step.key}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Order Type */}
               <Card className="border-border/50 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
                 <CardHeader>
                   <CardTitle className="text-lg font-bold tracking-tight">{getTranslation('common', 'orderType', language)}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className={`grid gap-4 ${
+                  <div className={`grid gap-3 sm:gap-4 ${
                     [settings.accept_delivery, settings.accept_dine_in, settings.accept_takeaway].filter(Boolean).length === 3
-                      ? 'grid-cols-3'
+                      ? 'grid-cols-1 sm:grid-cols-3'
                       : [settings.accept_delivery, settings.accept_dine_in, settings.accept_takeaway].filter(Boolean).length === 2
                       ? 'grid-cols-2'
                       : 'grid-cols-1'
@@ -329,18 +448,20 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setOrderType('DELIVERY')}
-                        className={`p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden ${
+                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
                           orderType === 'DELIVERY' 
-                            ? 'border-primary bg-primary/10 text-primary shadow-md scale-105' 
-                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-105'
+                            ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
+                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
                         }`}
+                        aria-label="Select delivery order type"
+                        title="Delivery"
                       >
                         {orderType === 'DELIVERY' && (
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-shimmer" />
                         )}
-                        <Truck className={`mx-auto h-10 w-10 mb-2 transition-transform ${orderType === 'DELIVERY' ? 'scale-110' : 'group-hover:scale-110'}`} />
-                        <div className="font-semibold text-base relative">{getTranslation('common', 'delivery', language)}</div>
-                        <div className="text-sm text-muted-foreground relative">30-45 {getTranslation('common', 'minutes', language)}</div>
+                        <Truck className={`mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2 transition-transform ${orderType === 'DELIVERY' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                        <div className="font-semibold text-sm sm:text-base relative">{getTranslation('common', 'delivery', language)}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground relative">30-45 {getTranslation('common', 'minutes', language)}</div>
                       </button>
                     )}
                     
@@ -348,18 +469,20 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setOrderType('DINE_IN')}
-                        className={`p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden ${
+                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
                           orderType === 'DINE_IN' 
-                            ? 'border-primary bg-primary/10 text-primary shadow-md scale-105' 
-                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-105'
+                            ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
+                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
                         }`}
+                        aria-label="Select dine-in order type"
+                        title="Dine In"
                       >
                         {orderType === 'DINE_IN' && (
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-shimmer" />
                         )}
-                        <Users className={`mx-auto h-10 w-10 mb-2 transition-transform ${orderType === 'DINE_IN' ? 'scale-110' : 'group-hover:scale-110'}`} />
-                        <div className="font-semibold text-base relative">{getTranslation('common', 'dineIn', language)}</div>
-                        <div className="text-sm text-muted-foreground relative">{getTranslation('common', 'reserveTable', language)}</div>
+                        <Users className={`mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2 transition-transform ${orderType === 'DINE_IN' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                        <div className="font-semibold text-sm sm:text-base relative">{getTranslation('common', 'dineIn', language)}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground relative">{getTranslation('common', 'reserveTable', language)}</div>
                       </button>
                     )}
                     
@@ -367,18 +490,20 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setOrderType('TAKEAWAY')}
-                        className={`p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden ${
+                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
                           orderType === 'TAKEAWAY' 
-                            ? 'border-primary bg-primary/10 text-primary shadow-md scale-105' 
-                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-105'
+                            ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
+                            : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
                         }`}
+                        aria-label="Select takeaway order type"
+                        title="Takeaway"
                       >
                         {orderType === 'TAKEAWAY' && (
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-shimmer" />
                         )}
-                        <Store className={`mx-auto h-10 w-10 mb-2 transition-transform ${orderType === 'TAKEAWAY' ? 'scale-110' : 'group-hover:scale-110'}`} />
-                        <div className="font-semibold text-base relative">{getTranslation('common', 'takeaway', language)}</div>
-                        <div className="text-sm text-muted-foreground relative">15-20 {getTranslation('common', 'minutes', language)}</div>
+                        <Store className={`mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2 transition-transform ${orderType === 'TAKEAWAY' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                        <div className="font-semibold text-sm sm:text-base relative">{getTranslation('common', 'takeaway', language)}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground relative">15-20 {getTranslation('common', 'minutes', language)}</div>
                       </button>
                     )}
                   </div>
@@ -440,25 +565,27 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('CARD')}
-                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-4 transition-all relative overflow-hidden group ${
+                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
                             paymentMethod === 'CARD' 
-                              ? 'border-primary bg-primary/10 shadow-md' 
+                              ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
                               : 'border-border hover:border-primary/50 hover:shadow-sm'
                           }`}
+                          aria-label="Select card payment method"
+                          title="Pay by Card"
                         >
                           {paymentMethod === 'CARD' && (
                             <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
                           )}
-                          <div className={`p-3 rounded-lg ${paymentMethod === 'CARD' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all`}>
-                            <CreditCard className="h-6 w-6" />
+                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'CARD' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all`}>
+                            <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
                           </div>
                           <div className="flex-1 relative">
-                            <div className="font-semibold">{getTranslation('common', 'card', language)}</div>
-                            <div className="text-sm text-muted-foreground">{getTranslation('common', 'payByCard', language)}</div>
+                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'card', language)}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payByCard', language)}</div>
                           </div>
                           {paymentMethod === 'CARD' && (
                             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                              <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -468,25 +595,27 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('CASH')}
-                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-4 transition-all relative overflow-hidden group ${
+                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
                             paymentMethod === 'CASH' 
-                              ? 'border-primary bg-primary/10 shadow-md' 
+                              ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
                               : 'border-border hover:border-primary/50 hover:shadow-sm'
                           }`}
+                          aria-label="Select cash payment method"
+                          title="Pay with Cash"
                         >
                           {paymentMethod === 'CASH' && (
                             <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
                           )}
-                          <div className={`p-3 rounded-lg ${paymentMethod === 'CASH' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all font-bold text-lg flex items-center justify-center w-12 h-12`}>
+                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'CASH' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all font-bold text-base sm:text-lg flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12`}>
                             $
                           </div>
                           <div className="flex-1 relative">
-                            <div className="font-semibold">{getTranslation('common', 'cash', language)}</div>
-                            <div className="text-sm text-muted-foreground">{getTranslation('common', 'payOnDelivery', language)}</div>
+                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'cash', language)}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payOnDelivery', language)}</div>
                           </div>
                           {paymentMethod === 'CASH' && (
                             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                              <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -496,17 +625,29 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('WALLET')}
-                          className={`w-full p-4 rounded-lg border-2 text-left flex items-center space-x-3 transition-all ${
+                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
                             paymentMethod === 'WALLET' 
-                              ? 'border-primary bg-primary/10' 
-                              : 'border-border hover:border-primary/50'
+                              ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
+                              : 'border-border hover:border-primary/50 hover:shadow-sm'
                           }`}
+                          aria-label="Select mobile wallet payment method"
+                          title="Pay by Mobile Wallet"
                         >
-                          <div className="h-6 w-6 flex items-center justify-center bg-accent/80 rounded text-accent-foreground font-bold text-sm">📱</div>
-                          <div>
-                            <div className="font-medium">{getTranslation('common', 'wallet', language)}</div>
-                            <div className="text-sm text-muted-foreground">{getTranslation('common', 'payByWallet', language)}</div>
+                          {paymentMethod === 'WALLET' && (
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
+                          )}
+                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'WALLET' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all text-base sm:text-lg flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12`}>
+                            📱
                           </div>
+                          <div className="flex-1 relative">
+                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'wallet', language)}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payByWallet', language)}</div>
+                          </div>
+                          {paymentMethod === 'WALLET' && (
+                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-3 h-3 text-white" />
+                            </div>
+                          )}
                         </button>
                       )}
                     </div>
@@ -544,7 +685,7 @@ export default function CheckoutPage() {
             <div className="lg:col-span-1">
               <Card className="sticky top-20 shadow-lg border-border">
                 <CardHeader className="bg-gradient-to-br from-primary/5 to-accent/5">
-                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
                     <ShoppingBag className="h-5 w-5 text-primary" />
                     {getTranslation('common', 'orderSummary', language)}
                   </CardTitle>
@@ -554,7 +695,7 @@ export default function CheckoutPage() {
                   {/* Items */}
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                     {items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm gap-2">
+                      <div key={item.id} className="flex justify-between text-xs sm:text-sm gap-2">
                         <span className="flex-1 min-w-0">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold mr-2">{item.quantity}</span>
                           <span className="line-clamp-1">{item.meal.name}</span>
@@ -565,19 +706,19 @@ export default function CheckoutPage() {
                   </div>
                   
                   <div className="border-t border-border pt-3 space-y-2">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">{getTranslation('common', 'subtotal', language)}</span>
                       <span className="font-semibold tabular-nums">{formatPrice(subtotal, language)}</span>
                     </div>
                     
                     {orderType === 'DELIVERY' && (
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground">{getTranslation('common', 'deliveryFee', language)}</span>
                         <span className="font-semibold tabular-nums">{formatPrice(deliveryFee, language)}</span>
                       </div>
                     )}
                     
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">{getTranslation('common', 'tax', language)}</span>
                       <span className="font-semibold tabular-nums">{formatPrice(tax, language)}</span>
                     </div>
@@ -585,8 +726,8 @@ export default function CheckoutPage() {
                   
                   <div className="border-t border-border pt-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold">{getTranslation('common', 'total', language)}</span>
-                      <span className="text-2xl font-bold text-primary tabular-nums">{formatPrice(total, language)}</span>
+                      <span className="text-base sm:text-lg font-bold">{getTranslation('common', 'total', language)}</span>
+                      <span className="text-xl sm:text-2xl font-bold text-primary tabular-nums">{formatPrice(total, language)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -594,14 +735,20 @@ export default function CheckoutPage() {
                 <CardContent className="bg-muted/20 pt-0">
                   <Button
                     type="submit"
-                    size="lg"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="xl"
+                    className="w-full bg-gradient-to-r from-primary to-accent text-white hover:from-primary/90 hover:to-accent/90 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[44px]"
                     disabled={isSubmitting || (orderType === 'DELIVERY' && !deliveryAddress)}
+                    aria-label="Place order"
+                    title={`Place order - ${formatPrice(total, language)}`}
                   >
-                    {isSubmitting 
-                      ? `${getTranslation('common', 'placeOrder', language)}...` 
-                      : `${getTranslation('common', 'placeOrder', language)} - ${formatPrice(total, language)}`
-                    }
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2 text-sm sm:text-base">
+                        <ButtonSpinner />
+                        {getTranslation('common', 'placeOrder', language)}...
+                      </span>
+                    ) : (
+                      <span className="text-sm sm:text-base">{getTranslation('common', 'placeOrder', language)} - {formatPrice(total, language)}</span>
+                    )}
                   </Button>
                   {!isAuthenticated && (
                     <p className="text-xs text-center text-muted-foreground mt-2">
@@ -624,6 +771,50 @@ export default function CheckoutPage() {
         title="Verify Your Phone to Complete Order"
         description="We need to verify your phone number before placing your order"
       />
+      
+      {/* Stripe Payment Modal */}
+      {showStripePayment && pendingOrderId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-card rounded-3xl shadow-2xl border border-border max-w-lg w-full p-6 animate-slideUp">
+            <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Complete Payment
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              Secure payment powered by Stripe
+            </p>
+            
+            <StripePayment
+              orderId={pendingOrderId}
+              amount={total}
+              onSuccess={handlePaymentSuccess}
+              onCancel={handlePaymentCancel}
+              onFail={handlePaymentFail}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* M-Pesa Payment Modal */}
+      {showMpesaPayment && pendingOrderId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-card rounded-3xl shadow-2xl border border-border max-w-lg w-full p-6 animate-slideUp">
+            <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Complete Payment with M-Pesa
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              We will send an STK Push to your phone to authorize the payment.
+            </p>
+
+            <MPesaPayment 
+              orderId={pendingOrderId}
+              amount={total}
+              phoneNumber={user?.phone || ''}
+              onSuccess={handleMpesaSuccess}
+              onCancel={handleMpesaCancel}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

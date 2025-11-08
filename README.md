@@ -1,3 +1,34 @@
+## Demo Payments Mode
+
+Stripe keys are optional for a local demo. If you leave the `STRIPE_SECRET_KEY` blank in `backend/.env` (or set `STRIPE_DEMO_MODE=true`) the application enters demo mode:
+
+ - `POST /payments/create-payment-intent` returns a simulated PaymentIntent id & client secret (no network call to Stripe).
+ - `GET /payments/config` returns a placeholder publishable key plus `{ demo: true }` so the frontend shows a simulated payment UI with a "Simulate Success" button.
+ - `POST /payments/demo-complete` marks the order as paid (used by the simulated success button).
+
+To enable real Stripe processing later:
+
+1. Create Stripe account & get test keys.
+2. Populate in `backend/.env`:
+   - `STRIPE_PUBLISHABLE_KEY=pk_test_...`
+   - `STRIPE_SECRET_KEY=sk_test_...`
+   - `STRIPE_WEBHOOK_SECRET=whsec_...` (after creating a webhook endpoint or using the Stripe CLI)
+3. Ensure `STRIPE_DEMO_MODE=false` (or remove it).
+4. Restart backend.
+5. Use Stripe test cards (e.g. `4242 4242 4242 4242` with any future expiry, any CVC, any ZIP).
+
+Webhook (optional for full flow):
+
+Run the Stripe CLI to forward events:
+
+```
+stripe listen --forward-to localhost:8000/payments/webhook
+```
+
+Copy the displayed signing secret into `STRIPE_WEBHOOK_SECRET` and restart backend.
+
+If webhook isn't configured, successful client confirmation still updates order to confirmed in real mode when the webhook arrives; in demo mode we bypass Stripe entirely.
+
 # 🍽️ Moringa Food Ordering System
 
 A comprehensive full-stack food ordering application built with **Next.js 15** (frontend) and **FastAPI + MongoDB** (backend).

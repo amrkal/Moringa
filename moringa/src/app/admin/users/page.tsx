@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { formatDateShort } from '@/lib/utils';
+import { buttonStyles, modalStyles, inputStyles } from '@/lib/styles';
 
 interface User {
   id: string;
@@ -42,7 +43,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-  const response = await api.get('/users');
+  const response = await api.get('/users/');
       setUsers(response.data || []);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedLoadUsers', language));
@@ -58,10 +59,10 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
-  await api.put(`/users/${editingUser.id}`, formData);
+  await api.put(`/users/${editingUser.id}/`, formData);
         toast.success(getTranslation('admin', 'userUpdated', language), { id: loadingToast });
       } else {
-  await api.post('/users', formData);
+  await api.post('/users/', formData);
         toast.success(getTranslation('admin', 'userCreated', language), { id: loadingToast });
       }
 
@@ -174,7 +175,7 @@ export default function UsersPage() {
           </div>
           <button
             onClick={openModal}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg hover:shadow-xl font-medium"
+            className={buttonStyles.add}
           >
             <UserPlus size={20} strokeWidth={2.5} />
             Add User
@@ -220,7 +221,7 @@ export default function UsersPage() {
                 {!searchTerm && roleFilter === 'all' && (
                   <button
                     onClick={openModal}
-                    className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+                    className={`mt-4 ${buttonStyles.add}`}
                   >
                     <UserPlus size={20} />
                     Add User
@@ -288,10 +289,10 @@ export default function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => toggleActive(user)}
-                          className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 ${
+                          className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border-2 transition-all hover:scale-105 ${
                             user.is_active
-                              ? 'bg-green-500/10 text-green-700'
-                              : 'bg-gray-500/10 text-gray-700'
+                              ? 'border-green-500/30 bg-green-500/10 text-green-700 hover:bg-green-500/20'
+                              : 'border-gray-400/30 bg-gray-500/10 text-gray-700 hover:bg-gray-500/20'
                           }`}
                         >
                           {user.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -305,14 +306,14 @@ export default function UsersPage() {
                         <div className="flex gap-2 justify-end">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="p-2.5 rounded-xl hover:bg-blue-500/10 text-blue-600 transition-all hover:scale-110"
+                            className="p-2.5 rounded-xl border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-all hover:scale-110"
                             title="Edit"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-600 transition-all hover:scale-110"
+                            className="p-2.5 rounded-xl border-2 border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-all hover:scale-110"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -373,9 +374,15 @@ export default function UsersPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-card rounded-3xl max-w-md w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+        <div 
+          className={modalStyles.backdrop}
+          onClick={closeModal}
+        >
+          <div 
+            className={modalStyles.card}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={modalStyles.header}>
               <div>
                 <h2 className="text-2xl font-bold text-foreground tracking-tight">
                   {editingUser ? 'Edit User' : 'New User'}
@@ -386,13 +393,14 @@ export default function UsersPage() {
               </div>
               <button
                 onClick={closeModal}
-                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
+                className={modalStyles.closeButton}
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className={modalStyles.body}>
               <div>
                 <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                   {getTranslation('admin', 'userName', language)} *
@@ -441,38 +449,26 @@ export default function UsersPage() {
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as 'ADMIN' | 'CUSTOMER' })}
-                  className="w-full px-4 py-2.5 border border-[hsl(var(--input))] rounded-xl focus:ring-2 focus:ring-[hsl(var(--ring))] focus:border-transparent transition-all bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+                  className={inputStyles.select}
                   required
                 >
                   <option value="CUSTOMER">{getTranslation('admin', 'customerRole', language)}</option>
                   <option value="ADMIN">{getTranslation('admin', 'adminRole', language)}</option>
                 </select>
               </div>
-
-              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
-                  Active (user can login and use the system)
-                </label>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
+              <div className={modalStyles.footer}>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.secondary} flex-1`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.primary} flex-1`}
                 >
                   {editingUser ? 'Update' : 'Create'}
                 </button>

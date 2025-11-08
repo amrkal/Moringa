@@ -159,11 +159,13 @@ export default function OrdersPage() {
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center pb-5 relative">
           <div>
             <h1 className="text-4xl font-bold text-foreground tracking-tight">{getTranslation('admin', 'ordersManagement', language)}</h1>
             <p className="mt-2 text-muted-foreground">Manage and track all customer orders • {orders.length} total</p>
           </div>
+          {/* Gradient accent line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
           <div className="flex gap-3">
             <select
               value={statusFilter}
@@ -180,7 +182,9 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="card-premium overflow-hidden relative">
+          {/* Decorative gradient accent positioned above the table to avoid invalid thead children */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-gradient-to-r from-muted/50 to-muted/20">
               <tr>
@@ -247,7 +251,7 @@ export default function OrdersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-all">
+                        <button className="p-2 rounded-lg border-2 border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary transition-all hover:scale-110">
                           {expandedOrderId === order.id ? '▼' : '▶'}
                         </button>
                       </td>

@@ -19,6 +19,7 @@ import {
   Moon
 } from 'lucide-react';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { LogoImage } from '@/components/ui/optimized-image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
@@ -91,7 +92,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
       {/* Main content */}
       <div className="flex flex-col min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-[hsl(var(--card))]/80 backdrop-blur-md border-b border-[hsl(var(--border))] shadow-sm">
+        <div className="sticky top-0 z-10 bg-[hsl(var(--card))]/70 backdrop-blur-2xl border-b border-[hsl(var(--border))]/40 shadow-sm relative">
+          {/* Gradient accent line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-8">
               {/* Mobile Menu Button */}
@@ -104,7 +107,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
               </button>
               
               <Link href="/admin" className="flex items-center gap-3" aria-label="Moringa Admin Home">
-                <img src="/logo.jpg" alt="Moringa" className="h-8 w-auto rounded-sm" />
+                <LogoImage
+                  src="/logo.jpg"
+                  alt="Moringa"
+                  width={32}
+                  height={32}
+                  className="rounded-sm"
+                />
               </Link>
               
               {/* Navigation Links - Desktop */}

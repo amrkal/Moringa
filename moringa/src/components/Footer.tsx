@@ -3,19 +3,28 @@
 import Link from 'next/link';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
+import { LogoImage } from '@/components/ui/optimized-image';
 
 export function Footer() {
   const { language } = useLanguage();
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+    <footer className="bg-card/80 backdrop-blur-xl border-t border-border/40 mt-auto relative">
+      {/* Premium gradient accent line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* First Row: Logo + Legal Links */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-4">
-            <img src="/logo.jpg" alt="Moringa" className="h-6 w-auto rounded-sm" />
-            <span className="text-[hsl(var(--muted-foreground))] hidden sm:inline">
+            <LogoImage
+              src="/logo.jpg"
+              alt="Moringa"
+              width={24}
+              height={24}
+              className="rounded-md shadow-sm"
+            />
+            <span className="text-muted-foreground hidden sm:inline">
               {getTranslation('footer', 'tagline', language)}
             </span>
           </div>
@@ -24,28 +33,28 @@ export function Footer() {
           <div className="flex flex-wrap items-center gap-3">
             <Link 
               href="/terms" 
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors whitespace-nowrap"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               {getTranslation('footer', 'termsConditions', language)}
             </Link>
-            <span className="text-[hsl(var(--border))]">•</span>
+            <span className="text-border">•</span>
             <Link 
               href="/privacy" 
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors whitespace-nowrap"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               {getTranslation('footer', 'privacyPolicy', language)}
             </Link>
-            <span className="text-[hsl(var(--border))]">•</span>
+            <span className="text-border">•</span>
             <Link 
               href="/refund" 
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors whitespace-nowrap"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               {getTranslation('footer', 'refundPolicy', language)}
             </Link>
-            <span className="text-[hsl(var(--border))]">•</span>
+            <span className="text-border">•</span>
             <Link 
               href="/cookies" 
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors whitespace-nowrap"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
               {getTranslation('footer', 'cookiePolicy', language)}
             </Link>
@@ -53,16 +62,16 @@ export function Footer() {
         </div>
 
         {/* Second Row: Contact + Copyright */}
-        <div className="mt-2 pt-2 border-t border-[hsl(var(--border))] flex flex-wrap items-center justify-between gap-3 text-xs text-[hsl(var(--muted-foreground))]">
+        <div className="mt-3 pt-3 border-t border-border/60 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <div className="flex flex-wrap items-center gap-3">
             <span>+972 52-589-9214</span>
-            <span className="text-[hsl(var(--border))]">•</span>
+            <span className="text-border">•</span>
             <span>info@moringa.com</span>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
             <span>© {currentYear} Moringa. {getTranslation('footer', 'allRightsReserved', language)}</span>
-            <span className="text-[hsl(var(--border))]">•</span>
+            <span className="text-border">•</span>
             <span className="flex items-center gap-1.5">
               <span>{getTranslation('footer', 'poweredBy', language)}</span>
               <a 

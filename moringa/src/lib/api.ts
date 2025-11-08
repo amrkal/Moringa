@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { isRetryableError, logError } from './error-handler';
 
 // API Configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -8,11 +9,24 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 60000, // 60 seconds timeout (increased from 30s)
 });
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    // Trailing slash logic: skip for payment endpoints and order endpoints to avoid 307 redirects
+    if (config.url && !config.url.includes('?') && !config.url.endsWith('/')) {
+      const isPayments = config.url.startsWith('/payments');
+      const isOrders = config.url.startsWith('/orders');
+      // Heuristic: path param that looks like a 24-char hex (Mongo ObjectId)
+      const lastSegment = config.url.split('/').pop() || '';
+      const looksLikeObjectId = /^[a-fA-F0-9]{24}$/.test(lastSegment);
+      if (!isPayments && !isOrders && !looksLikeObjectId) {
+        config.url = config.url + '/';
+      }
+    }
+    
     // Prefer admin token but fall back to customer token so both flows work
     const adminToken = localStorage.getItem('token');
     const customerToken = localStorage.getItem('customerToken');
@@ -28,7 +42,17 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean; _retryCount?: number };
+
+    // Log error for monitoring
+    logError(error, {
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      status: error.response?.status,
+    });
+
+    // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       // Clear all auth tokens
       localStorage.removeItem('token');
@@ -53,6 +77,25 @@ api.interceptors.response.use(
         console.error('Error handling 401 redirect logic', e);
       }
     }
+
+    // Retry logic for retryable errors
+    if (originalRequest && isRetryableError(error) && !originalRequest._retry) {
+      originalRequest._retryCount = originalRequest._retryCount || 0;
+      
+      // Maximum 3 retries
+      if (originalRequest._retryCount < 3) {
+        originalRequest._retryCount += 1;
+        originalRequest._retry = true;
+
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, originalRequest._retryCount - 1) * 1000;
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        return api(originalRequest);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -76,7 +119,7 @@ export interface PaginatedResponse<T> {
 // Auth API
 export const authApi = {
   login: (phone: string, password: string) =>
-    api.post('/auth/login', { phone, password }),
+    api.post('/auth/login/', { phone, password }),
   
   register: (userData: {
     name: string;
@@ -85,19 +128,19 @@ export const authApi = {
     password: string;
     role?: 'CUSTOMER' | 'ADMIN';
   }) =>
-    api.post('/auth/register', userData),
+    api.post('/auth/register/', userData),
   
   sendOTP: (phone: string, method: 'sms' | 'whatsapp' = 'sms') =>
-    api.post('/auth/verify-phone', { phone, method: method.toUpperCase() }),
+    api.post('/auth/verify-phone/', { phone, method: method.toUpperCase() }),
   
   verifyOTP: (phone: string, otpCode: string) =>
-    api.post('/auth/confirm-phone', { phone, code: otpCode }),
+    api.post('/auth/confirm-phone/', { phone, code: otpCode }),
   
   verifyPhone: (phone: string, code: string) =>
-    api.post('/auth/verify-phone', { phone, code }),
+    api.post('/auth/verify-phone/', { phone, code }),
   
   getCurrentUser: () =>
-    api.get('/auth/me'),
+    api.get('/auth/me/'),
 };
 
 // Categories API
@@ -268,19 +311,19 @@ export const ordersApi = {
     delivery_address: string;
     special_instructions: string;
   }>) =>
-    api.put(`/orders/${id}`, orderData),
+    api.put(`/orders/${id}/`, orderData),
   
   getStats: () =>
-    api.get('/orders/stats'),
+    api.get('/orders/stats/'),
 };
 
 // Users API
 export const usersApi = {
   getAll: (params?: { skip?: number; limit?: number; role?: string }) =>
-    api.get('/users', { params }),
+    api.get('/users/', { params }),
   
   getById: (id: string) =>
-    api.get(`/users/${id}`),
+    api.get(`/users/${id}/`),
   
   update: (id: string, userData: Partial<{
     name: string;

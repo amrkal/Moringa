@@ -52,8 +52,16 @@ class Settings(BaseSettings):
     # Payment
     stripe_publishable_key: Optional[str] = None
     stripe_secret_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
+    stripe_demo_mode: bool = False
+    
+    # M-Pesa
     mpesa_consumer_key: Optional[str] = None
     mpesa_consumer_secret: Optional[str] = None
+    mpesa_business_short_code: Optional[str] = None
+    mpesa_passkey: Optional[str] = None
+    mpesa_callback_url: Optional[str] = None
+    mpesa_environment: str = "sandbox"  # sandbox or production
 
     class Config:
         env_file = ".env"

@@ -93,13 +93,15 @@ export default function AdminDashboard() {
     ordersByStatus: [],
   });
   const [loading, setLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<string>('30'); // Time period filter in days (supports custom)
+  const [customDays, setCustomDays] = useState<string>('');
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   useEffect(() => {
     fetchDashboardData();
     fetchAnalyticsData();
-  }, []);
+  }, [timePeriod]);
 
   const fetchAnalyticsData = async () => {
     try {
@@ -115,19 +117,19 @@ export default function AdminDashboard() {
         api.get('/analytics/sales/overview', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        api.get('/analytics/sales/daily?days=30', {
+        api.get(`/analytics/sales/daily?days=${timePeriod}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        api.get('/analytics/meals/popular?limit=10', {
+        api.get('/analytics/meals/popular/?limit=10', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        api.get('/analytics/orders/peak-hours?days=30', {
+        api.get(`/analytics/orders/peak-hours?days=${timePeriod}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        api.get('/analytics/orders/by-type', {
+        api.get('/analytics/orders/by-type/', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        api.get('/analytics/orders/by-status', {
+        api.get('/analytics/orders/by-status/', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -321,7 +323,7 @@ export default function AdminDashboard() {
       // Fetch all data in parallel
       const [ordersRes, usersRes, mealsRes] = await Promise.all([
         api.get('/orders/'),
-        api.get('/users'),
+        api.get('/users/'),
         api.get('/meals/?active_only=false')
       ]);
 
@@ -512,6 +514,65 @@ export default function AdminDashboard() {
   return (
     <AdminLayout title={getTranslation('admin', 'dashboard', language)}>
       <div className="space-y-5" dir="ltr">
+        {/* Dashboard Header */}
+        <div className="relative pb-5 mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                {getTranslation('admin', 'dashboard', language)}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">Monitor your restaurant's performance and insights</p>
+            </div>
+            
+            {/* Time Period Filter */}
+            <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-xl border border-border">
+              {[
+                { value: '1', label: '1 Day' },
+                { value: '7', label: '7 Days' },
+                { value: '30', label: '30 Days' },
+                { value: '90', label: '90 Days' },
+              ].map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => setTimePeriod(period.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    timePeriod === period.value
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+              <div className="h-6 w-px bg-border mx-1" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  placeholder="Days"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                  className="w-20 px-2 py-1.5 rounded-lg border border-border bg-card text-sm"
+                />
+                <button
+                  onClick={() => {
+                    const n = parseInt(customDays, 10);
+                    if (!isNaN(n) && n >= 1 && n <= 365) {
+                      setTimePeriod(String(n));
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Gradient accent line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+        </div>
+
         {/* Export Reports Section */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-2xl border border-blue-200 dark:border-blue-900 p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -546,7 +607,7 @@ export default function AdminDashboard() {
             <Link 
               key={index}
               href={stat.href}
-              className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-all duration-200 p-6 group cursor-pointer"
+              className="card-premium p-6 group cursor-pointer"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`${stat.color} p-3 rounded-xl group-hover:scale-110 transition-transform duration-200`}>
@@ -572,7 +633,7 @@ export default function AdminDashboard() {
 
         {/* Today's Performance */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+          <div className="card-premium p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center">
                 <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" strokeWidth={2} />
@@ -585,7 +646,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+          <div className="card-premium p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
@@ -598,7 +659,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+          <div className="card-premium p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" strokeWidth={2} />
@@ -610,7 +671,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-5">
+          <div className="card-premium p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
                 <Activity className="h-5 w-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
@@ -629,11 +690,11 @@ export default function AdminDashboard() {
         {/* Charts and Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Daily Sales Chart */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-foreground tracking-tight">Daily Sales Trend</h3>
-                <p className="text-xs text-muted-foreground mt-1">Last 30 days performance</p>
+                <p className="text-xs text-muted-foreground mt-1">Last {timePeriod} {timePeriod === '1' ? 'day' : 'days'} performance</p>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={300}>
@@ -679,7 +740,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Orders */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'recentOrders', language)}</h3>
               <Link 
@@ -764,8 +825,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Popular Meals */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-border bg-muted/30">
+        <div className="card-premium overflow-hidden">
+          <div className="px-6 py-5 border-b border-border bg-muted/30 relative">
+            {/* Gradient accent */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">{getTranslation('admin', 'popularMeals', language)}</h3>
               <Link 
@@ -958,10 +1021,10 @@ export default function AdminDashboard() {
         {/* Additional Analytics Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Peak Hours Chart */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Peak Order Hours</h3>
-              <p className="text-sm text-muted-foreground mt-1">Order distribution by hour of day</p>
+              <p className="text-sm text-muted-foreground mt-1">Order distribution by hour (last {timePeriod} {timePeriod === '1' ? 'day' : 'days'})</p>
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics.peakHours}>
@@ -993,7 +1056,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Order Types Distribution */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Types</h3>
               <p className="text-sm text-muted-foreground mt-1">Distribution by delivery type</p>
@@ -1028,7 +1091,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Popular Meals Chart */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Top 10 Popular Meals</h3>
               <p className="text-sm text-muted-foreground mt-1">By order count</p>
@@ -1061,7 +1124,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Order Status Distribution */}
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+          <div className="card-premium p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Status</h3>
               <p className="text-sm text-muted-foreground mt-1">Current order distribution</p>

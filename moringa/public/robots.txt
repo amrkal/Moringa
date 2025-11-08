@@ -1,0 +1,23 @@
+# Moringa Restaurant - Robots.txt
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow private/auth pages
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /checkout
+Disallow: /cart
+Disallow: /orders
+Disallow: /api
+
+# Allow menu and public pages
+Allow: /menu
+Allow: /privacy
+Allow: /terms
+Allow: /refund
+Allow: /cookies
+
+# Sitemap location
+Sitemap: https://moringa-restaurant.com/sitemap.xml

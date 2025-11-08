@@ -98,10 +98,13 @@ async def confirm_phone_verification(
     user = await crud.crud_user.get_by_phone(phone=verification_confirm.phone)
     if not user:
         # Create a minimal customer user record for OTP login
+        # Use a synthetic unique email to avoid duplicate key errors on unique email index
+        synthetic_email = f"guest_{verification_confirm.phone}@guest.local"
         user = await crud.crud_user.create(
             obj_in=schemas.UserCreate(
                 phone=verification_confirm.phone,
                 name="Guest",
+                email=synthetic_email,
                 password=None,
             )
         )

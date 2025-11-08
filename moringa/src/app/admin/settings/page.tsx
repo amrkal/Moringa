@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Store, DollarSign, Truck, Clock, MapPin, Phone, Mail, Globe, Utensils } from 'lucide-react';
+import { Save, Store, DollarSign, Truck, Clock, MapPin, Phone, Mail, Globe, Utensils, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -49,6 +49,8 @@ interface Settings {
   
   // Other
   is_accepting_orders: boolean;
+  // Branding (not persisted in settings API yet, but used for upload preview)
+  restaurant_logo?: string;
 }
 
 export default function SettingsPage() {
@@ -89,6 +91,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'delivery' | 'payments' | 'operations'>('info');
   const [languageTab, setLanguageTab] = useState<'en' | 'ar' | 'he'>('en');
+  const [logoPreview, setLogoPreview] = useState<string>('/logo.jpg');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -111,6 +116,13 @@ export default function SettingsPage() {
           restaurant_address_ar: response.data.restaurant_address_ar || '',
           restaurant_address_he: response.data.restaurant_address_he || ''
         });
+        // Attempt to use provided logo URL if exists in future backend version
+        if (response.data.restaurant_logo) {
+          setLogoPreview(response.data.restaurant_logo);
+        } else {
+          // fall back to default public logo
+          setLogoPreview('/logo.jpg');
+        }
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -136,6 +148,51 @@ export default function SettingsPage() {
 
   const updateSetting = (key: keyof Settings, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogoChange = (file: File | null) => {
+    if (!file) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (typeof e.target?.result === 'string') {
+        setLogoPreview(e.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadLogo = async () => {
+    if (!logoFile) {
+      toast.error(getTranslation('admin', 'noLogoSelected', language));
+      return;
+    }
+    setUploadingLogo(true);
+    const loadingToast = toast.loading(getTranslation('admin', 'uploadingLogo', language));
+    try {
+      const formData = new FormData();
+      formData.append('logo', logoFile);
+      const res = await fetch('/api/admin/settings/logo', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data.logo) {
+        setLogoPreview(data.logo);
+        updateSetting('restaurant_logo', data.logo);
+      }
+      toast.success(getTranslation('admin', 'logoUpdated', language), { id: loadingToast });
+      // Force icon refresh by updating link tags (PWA) if present
+      const iconSizes = ['192x192', '512x512'];
+      iconSizes.forEach(size => {
+        const el = document.querySelector(`link[rel='icon'][sizes='${size}']`) as HTMLLinkElement | null;
+        if (el) el.href = `/icon-${size}.png?ts=${Date.now()}`;
+      });
+      const apple = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement | null;
+      if (apple) apple.href = `/apple-touch-icon.png?ts=${Date.now()}`;
+    } catch (e: any) {
+      toast.error(e.message || getTranslation('admin', 'failedUploadLogo', language), { id: loadingToast });
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   if (loading) {
@@ -218,6 +275,37 @@ export default function SettingsPage() {
             {/* Restaurant Info Tab */}
             {activeTab === 'info' && (
               <div className="space-y-6">
+                {/* Logo Upload */}
+                <div className="border border-[hsl(var(--border))] rounded-xl p-4 bg-[hsl(var(--card))] flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  <div className="w-32 h-32 rounded-lg border border-[hsl(var(--border))] bg-background overflow-hidden flex items-center justify-center">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo preview" className="object-contain w-full h-full" />
+                    ) : (
+                      <ImageIcon className="w-10 h-10 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm font-medium text-[hsl(var(--foreground))] flex items-center gap-2"><ImageIcon className="w-4 h-4" /> {getTranslation('admin', 'restaurantLogo', language)}</p>
+                    <p className="text-xs text-[hsl(var(--muted-foreground))]">{getTranslation('admin', 'logoHelpText', language)}</p>
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleLogoChange(e.target.files?.[0] || null)}
+                        className="text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={uploadLogo}
+                        disabled={uploadingLogo || !logoFile}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+                      >
+                        <UploadCloud className="w-4 h-4" />
+                        {uploadingLogo ? getTranslation('admin', 'uploading', language) : getTranslation('admin', 'uploadLogo', language)}
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 {/* Language Tabs for Multilingual Fields */}
                 <div className="flex border-b border-border">
                   <button

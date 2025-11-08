@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { formatCurrency } from '@/lib/format';
 import { getLocalizedText } from '@/lib/i18n';
+import { buttonStyles, modalStyles, tabStyles, inputStyles } from '@/lib/styles';
 
 interface Ingredient {
   id: string;
@@ -42,8 +43,10 @@ export default function IngredientsPage() {
     description_ar: '',
     description_he: '',
     price: '',
+    image: '',
     is_active: true
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchIngredients();
@@ -78,6 +81,7 @@ export default function IngredientsPage() {
         he: formData.description_he || ''
       },
       price: parseFloat(formData.price),
+      image: formData.image || undefined,
       is_active: formData.is_active
     };
 
@@ -144,6 +148,7 @@ export default function IngredientsPage() {
         description_ar: ingredient.description_ar || (typeof ingredient.description === 'object' ? ingredient.description?.ar : '') || '',
         description_he: ingredient.description_he || (typeof ingredient.description === 'object' ? ingredient.description?.he : '') || '',
         price: ingredient.price.toString(),
+        image: (ingredient as any).image || '',
         is_active: ingredient.is_active
       });
     } else {
@@ -158,6 +163,7 @@ export default function IngredientsPage() {
         description_ar: '',
         description_he: '',
         price: '',
+        image: '',
         is_active: true
       });
     }
@@ -177,8 +183,42 @@ export default function IngredientsPage() {
       description_ar: '',
       description_he: '',
       price: '',
+      image: '',
       is_active: true
     });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData({ ...formData, image: base64String });
+        setUploadingImage(false);
+      };
+      reader.onerror = () => {
+        toast.error('Failed to read image');
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Failed to upload image');
+      setUploadingImage(false);
+    }
   };
 
   if (loading) {
@@ -198,7 +238,7 @@ export default function IngredientsPage() {
           <h1 className="text-3xl font-bold text-foreground">{getTranslation('admin', 'ingredientsManagement', language)}</h1>
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            className={buttonStyles.add}
           >
             <Plus size={20} />
             {getTranslation('admin', 'addIngredient', language)}
@@ -218,7 +258,7 @@ export default function IngredientsPage() {
                 </div>
                 <button
                   onClick={() => openModal()}
-                  className="mt-4 flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-2xl hover:bg-primary/90 hover:scale-105 transition-all shadow-lg font-medium"
+                  className={`mt-4 ${buttonStyles.add}`}
                 >
                   <Plus size={20} />
                   Add Ingredient
@@ -272,10 +312,10 @@ export default function IngredientsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => toggleActive(ingredient)}
-                        className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 ${
+                        className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border-2 transition-all hover:scale-105 ${
                           ingredient.is_active 
-                            ? 'bg-green-500/10 text-green-700' 
-                            : 'bg-gray-500/10 text-gray-700'
+                            ? 'border-green-500/30 bg-green-500/10 text-green-700 hover:bg-green-500/20' 
+                            : 'border-gray-400/30 bg-gray-500/10 text-gray-700 hover:bg-gray-500/20'
                         }`}
                       >
                         {ingredient.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -286,14 +326,14 @@ export default function IngredientsPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => openModal(ingredient)}
-                          className="p-2.5 rounded-xl hover:bg-blue-500/10 text-blue-600 transition-all hover:scale-110"
+                          className="p-2.5 rounded-xl border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-all hover:scale-110"
                           title="Edit"
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => handleDelete(ingredient.id)}
-                          className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-600 transition-all hover:scale-110"
+                          className="p-2.5 rounded-xl border-2 border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-all hover:scale-110"
                           title="Delete"
                         >
                           <Trash2 size={16} />
@@ -309,10 +349,16 @@ export default function IngredientsPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-card rounded-3xl max-w-2xl w-full shadow-2xl border border-border animate-in slide-in-from-bottom-4 duration-300">
+        <div 
+          className={modalStyles.backdrop}
+          onClick={closeModal}
+        >
+          <div 
+            className={modalStyles.card}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+            <div className={modalStyles.header}>
               <div>
                 <h2 className="text-2xl font-bold text-foreground tracking-tight">
                   {editingIngredient ? 'Edit Ingredient' : 'New Ingredient'}
@@ -324,46 +370,35 @@ export default function IngredientsPage() {
               <button
                 type="button"
                 onClick={closeModal}
-                className="p-2.5 hover:bg-muted rounded-xl transition-all hover:scale-110"
+                className={modalStyles.closeButton}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Modal Body - Scrollable */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className={modalStyles.body}>
               {/* Language Tabs */}
-              <div className="flex gap-1 p-1 bg-muted rounded-xl">
+              <div className={tabStyles.container}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('en')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'en'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  className={activeTab === 'en' ? tabStyles.active : tabStyles.inactive}
                 >
                   English
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('ar')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'ar'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  className={activeTab === 'ar' ? tabStyles.active : tabStyles.inactive}
                 >
                   العربية
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('he')}
-                  className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'he'
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background'
-                  }`}
+                  className={activeTab === 'he' ? tabStyles.active : tabStyles.inactive}
                 >
                   עברית
                 </button>
@@ -482,31 +517,74 @@ export default function IngredientsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-5 w-5 text-primary focus:ring-2 focus:ring-primary/50 border-border rounded-md cursor-pointer"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium text-foreground cursor-pointer flex-1">
-                  Active (available for customers to add)
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Image URL or Upload
                 </label>
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={formData.image && !formData.image.startsWith('data:') ? formData.image : ''}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="ingredient-image-upload"
+                      disabled={uploadingImage}
+                    />
+                    <label
+                      htmlFor="ingredient-image-upload"
+                      className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-border rounded-xl hover:border-primary transition-all cursor-pointer ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          <span className="text-sm text-muted-foreground">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm text-muted-foreground">Click to upload image (max 5MB)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  {formData.image && (
+                    <div className="mt-3 p-2 bg-muted/30 rounded-xl">
+                      <img
+                        src={formData.image}
+                        alt="Preview"
+                        className="w-full h-40 object-cover rounded-lg shadow-sm"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="flex gap-3 pt-4 border-t border-border mt-6 pt-6">
+              {/* Modal Footer - Fixed at bottom */}
+              <div className={modalStyles.footer}>
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-3 border-2 border-border rounded-xl text-foreground hover:bg-muted/50 transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.secondary} flex-1`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-xl hover:shadow-xl transition-all font-medium hover:scale-105"
+                  className={`${buttonStyles.primary} flex-1`}
                 >
                   {editingIngredient ? 'Update' : 'Create'}
                 </button>

@@ -16,6 +16,8 @@ interface UseWebSocketOptions {
   onError?: (error: Event) => void;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  /** When true, pauses reconnection attempts while the tab is hidden (default: true) */
+  pauseReconnectWhenHidden?: boolean;
 }
 
 export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
@@ -26,6 +28,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     onError,
     reconnectInterval = 3000,
     maxReconnectAttempts = 10,
+    pauseReconnectWhenHidden = true,
   } = options;
 
   const [isConnected, setIsConnected] = useState(false);
@@ -33,15 +36,18 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isReconnectingRef = useRef(false);
-  const mountedRef = useRef(false);
+  // Tracks an in-flight connection attempt so we don't start parallel connects,
+  // but still allow subsequent reconnect attempts after close.
+  const isConnectingRef = useRef(false);
+  const warnedOnceRef = useRef(false);
 
   const connect = useCallback(() => {
     // Prevent multiple simultaneous connection attempts
-    if (mountedRef.current || wsRef.current?.readyState === WebSocket.OPEN || isReconnectingRef.current) {
+    const state = wsRef.current?.readyState;
+    if (isConnectingRef.current || state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
       return;
     }
-    
-    mountedRef.current = true;
+    isConnectingRef.current = true;
 
     try {
       const ws = new WebSocket(url);
@@ -54,6 +60,8 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
         setIsConnected(true);
         setReconnectCount(0);
         isReconnectingRef.current = false;
+        isConnectingRef.current = false;
+        warnedOnceRef.current = false; // reset error throttle after a successful connection
         onConnect?.();
       };
 
@@ -67,35 +75,63 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
       };
 
       ws.onerror = (error) => {
-        // Only log in development to avoid console spam
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('WebSocket connection failed, will use polling fallback');
+        // Throttle console spam in dev: warn only once until a successful reconnect
+        if (process.env.NODE_ENV === 'development' && !warnedOnceRef.current) {
+          console.warn('WebSocket connection error');
+          warnedOnceRef.current = true;
         }
+        // If an error occurs before close, allow future reconnect attempts
+        isConnectingRef.current = false;
         onError?.(error);
       };
 
       ws.onclose = () => {
         if (process.env.NODE_ENV === 'development') {
-          console.log('WebSocket disconnected');
+          const willRetry = reconnectCount < maxReconnectAttempts;
+          if (!willRetry) {
+            console.warn('WebSocket disconnected (max retries reached)');
+          } else {
+            // Quiet disconnect logs to reduce noise during retries
+            // console.debug('WebSocket disconnected, scheduling reconnect');
+          }
         }
         setIsConnected(false);
         wsRef.current = null;
+        isConnectingRef.current = false;
         onDisconnect?.();
 
         // Attempt to reconnect
         if (reconnectCount < maxReconnectAttempts && !isReconnectingRef.current) {
           isReconnectingRef.current = true;
-          reconnectTimeoutRef.current = setTimeout(() => {
-            setReconnectCount((prev) => prev + 1);
-            connect();
-          }, reconnectInterval);
+          // Exponential backoff with a max cap of 30s
+          const base = Math.max(500, reconnectInterval);
+          const jitter = Math.random() * 250; // add small jitter
+          const delay = Math.min(base * Math.pow(2, Math.max(0, reconnectCount - 1)) + jitter, 30000);
+
+          const scheduleReconnect = () => {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              setReconnectCount((prev) => prev + 1);
+              connect();
+            }, delay);
+          };
+
+          if (pauseReconnectWhenHidden && typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+            // Wait until tab becomes visible to attempt reconnection
+            const onVisible = () => {
+              document.removeEventListener('visibilitychange', onVisible);
+              if (document.visibilityState === 'visible') scheduleReconnect();
+            };
+            document.addEventListener('visibilitychange', onVisible);
+          } else {
+            scheduleReconnect();
+          }
         }
       };
     } catch (error) {
       console.error('Failed to create WebSocket:', error);
       isReconnectingRef.current = false;
     }
-  }, [url, onConnect, onMessage, onDisconnect, onError, reconnectCount, reconnectInterval, maxReconnectAttempts]);
+  }, [url, onConnect, onMessage, onDisconnect, onError, reconnectCount, reconnectInterval, maxReconnectAttempts, pauseReconnectWhenHidden]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -116,7 +152,9 @@ export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(typeof message === 'string' ? message : JSON.stringify(message));
     } else {
-      console.warn('WebSocket is not connected. Cannot send message.');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('WebSocket is not connected. Cannot send message.');
+      }
     }
   }, []);
 

@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-// Use native <img> to avoid next/image domain restrictions for arbitrary URLs
+import { MealImage } from "@/components/ui/optimized-image";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getTranslation } from "@/lib/translations";
 import { getLocalizedText } from "@/lib/i18n";
@@ -281,7 +281,11 @@ export default function MealCustomizeModal({
               {/* Small image in edit mode */}
               {mode === 'edit' && meal.image_url && (
                 <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                  <img src={meal.image_url} alt={getName(meal, language)} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                  <MealImage
+                    src={meal.image_url}
+                    alt={getName(meal, language)}
+                    priority
+                  />
                 </div>
               )}
             </div>
@@ -289,7 +293,11 @@ export default function MealCustomizeModal({
             {/* Smaller image in add mode */}
             {mode === 'add' && meal.image_url && (
               <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
-                <img src={meal.image_url} alt={getName(meal, language)} className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
+                <MealImage
+                  src={meal.image_url}
+                  alt={getName(meal, language)}
+                  priority
+                />
               </div>
             )}
 

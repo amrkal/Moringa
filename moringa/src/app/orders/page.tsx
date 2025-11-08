@@ -70,7 +70,7 @@ export default function OrdersPage() {
     try {
       setLoading(true);
       // Use authenticated user's orders endpoint
-      const res = await api.get('/orders/my-orders');
+      const res = await api.get('/orders/my-orders/');
       console.log('Orders API Response:', res.data); // Debug log
       const raw = res.data?.data || res.data || [];
       const list = Array.isArray(raw) ? raw : [];
@@ -338,13 +338,14 @@ export default function OrdersPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 relative">
             <h1 className="text-4xl font-bold text-foreground mb-2 tracking-tight">
               {getTranslation('common', 'yourOrders', language)}
             </h1>
             <p className="text-muted-foreground text-lg">
               {orders.length} {orders.length === 1 ? 'order' : 'orders'} • Track your order history
             </p>
+            <div className="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           </div>
 
           <div className="space-y-6">
