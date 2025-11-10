@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatPrice } from '@/lib/utils';
-import { ArrowLeft, CreditCard, Truck, Store, Users, ShoppingBag, Check } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, Store, Users, ShoppingBag, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ButtonSpinner } from '@/components/ui/spinner';
@@ -115,27 +115,28 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-2 sm:px-4 relative overflow-hidden">
-        {/* Subtle animated background for modern feel */}
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+        {/* Premium animated background */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-1/3 left-1/4 w-60 h-60 sm:w-96 sm:h-96 bg-primary/10 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '4s' }}></div>
-          <div className="absolute bottom-1/3 right-1/4 w-60 h-60 sm:w-96 sm:h-96 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
+          <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+          <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
         </div>
-        <div className="max-w-md w-full mx-auto text-center">
-          <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-xl opacity-20 animate-pulse"></div>
-            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-muted to-accent/20 flex items-center justify-center ring-2 ring-primary/10">
-              <ShoppingBag className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground" />
+
+        <div className="max-w-md mx-auto text-center">
+          <div className="relative w-32 h-32 mx-auto mb-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-2xl opacity-20 animate-pulse"></div>
+            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-muted to-accent/20 flex items-center justify-center ring-4 ring-primary/10">
+              <ShoppingBag className="h-16 w-16 text-muted-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 sm:mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-foreground mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {getTranslation('common', 'emptyCart', language)}
           </h1>
-          <p className="text-muted-foreground text-base sm:text-lg mb-6 sm:mb-8 leading-relaxed">
+          <p className="text-muted-foreground mb-8 leading-relaxed">
             {getTranslation('common', 'startShopping', language)}
           </p>
           <Link href="/menu">
-            <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all px-6 sm:px-8">
+            <Button size="lg" className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all px-8">
               <ShoppingBag className="mr-2 h-5 w-5" />
               {getTranslation('common', 'menu', language)}
             </Button>
@@ -327,18 +328,11 @@ export default function CheckoutPage() {
     await placeOrder(true);
   };
 
-
   const handlePaymentSuccess = () => {
     toast.success('Payment successful!');
     clearCart();
     setShowStripePayment(false);
     router.push('/orders?payment=success');
-  };
-
-  const handlePaymentFail = (error: string) => {
-    setShowStripePayment(false);
-    setPendingOrderId(null);
-    toast.error(error || 'Payment verification failed. Please try again.');
   };
 
   const handlePaymentCancel = () => {
@@ -388,23 +382,23 @@ export default function CheckoutPage() {
         <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-accent/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
       </div>
 
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 max-w-full">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-4 sm:mb-8">
+          <div className="mb-6 sm:mb-8">
             <Link href="/cart">
-              <Button variant="ghost" className="mb-3 sm:mb-4 hover:bg-accent rounded-xl min-h-[44px] px-3 sm:px-4 text-base sm:text-lg">
-                <ArrowLeft className="mr-2 h-5 w-5 sm:h-4 sm:w-4" />
+              <Button variant="ghost" className="mb-4 hover:bg-accent rounded-xl">
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 {getTranslation('common', 'cart', language)}
               </Button>
             </Link>
-            <h1 className="text-xl sm:text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1 sm:mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
               {getTranslation('common', 'checkout', language)}
             </h1>
-            <p className="text-muted-foreground text-xs sm:text-base">Complete your order in a few easy steps</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Complete your order in a few easy steps</p>
 
             {/* Step indicator */}
-            <div className="mt-4 sm:mt-6">
-              <div className="relative flex items-center justify-between max-w-xs sm:max-w-md mx-auto">
+            <div className="mt-6">
+              <div className="relative flex items-center justify-between max-w-md mx-auto">
                 <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -z-10"></div>
                 {[
                   { key: 'Cart', active: false, done: true },
@@ -429,8 +423,8 @@ export default function CheckoutPage() {
           </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
               {/* Order Type */}
               <Card className="border-border/50 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
                 <CardHeader>
@@ -772,38 +766,59 @@ export default function CheckoutPage() {
         description="We need to verify your phone number before placing your order"
       />
       
-      {/* Stripe Payment Modal */}
+      {/* Stripe Payment Modal - Mobile Optimized */}
       {showStripePayment && pendingOrderId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-card rounded-3xl shadow-2xl border border-border max-w-lg w-full p-6 animate-slideUp">
-            <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Complete Payment
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Secure payment powered by Stripe
-            </p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+          <div className="bg-card rounded-t-3xl sm:rounded-3xl shadow-2xl border-t border-border sm:border max-w-lg w-full p-4 sm:p-6 animate-slideUp max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold mb-1 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Complete Payment
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  Secure checkout
+                </p>
+              </div>
+              <button
+                onClick={handlePaymentCancel}
+                className="p-2 hover:bg-muted rounded-full transition-colors"
+                aria-label="Close payment modal"
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
             
             <StripePayment
               orderId={pendingOrderId}
               amount={total}
               onSuccess={handlePaymentSuccess}
               onCancel={handlePaymentCancel}
-              onFail={handlePaymentFail}
             />
           </div>
         </div>
       )}
 
-      {/* M-Pesa Payment Modal */}
+      {/* M-Pesa Payment Modal - Mobile Optimized */}
       {showMpesaPayment && pendingOrderId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-card rounded-3xl shadow-2xl border border-border max-w-lg w-full p-6 animate-slideUp">
-            <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Complete Payment with M-Pesa
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              We will send an STK Push to your phone to authorize the payment.
-            </p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+          <div className="bg-card rounded-t-3xl sm:rounded-3xl shadow-2xl border-t border-border sm:border max-w-lg w-full p-4 sm:p-6 animate-slideUp max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold mb-1 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  M-Pesa Payment
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  We'll send an STK Push to your phone
+                </p>
+              </div>
+              <button
+                onClick={handleMpesaCancel}
+                className="p-2 hover:bg-muted rounded-full transition-colors"
+                aria-label="Close payment modal"
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
 
             <MPesaPayment 
               orderId={pendingOrderId}
