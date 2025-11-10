@@ -154,7 +154,6 @@ export default function CheckoutPage() {
   const placeOrder = async (skipAuthCheck: boolean = false) => {
     // Double-check authentication before placing order (unless explicitly skipped)
     if (!skipAuthCheck && (!isAuthenticated || !user?.phone)) {
-      toast.error(getTranslation('common', 'pleaseVerifyPhone', language) || 'Please verify your phone number');
       setShowVerification(true);
       return;
     }
@@ -317,9 +316,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check authentication FIRST before doing anything else
+    // Check authentication FIRST before doing anything else - just open modal, no error
     if (!isAuthenticated || !user?.phone) {
-      toast.error(getTranslation('common', 'pleaseVerifyPhone', language) || 'Please verify your phone number');
       setShowVerification(true);
       return;
     }
