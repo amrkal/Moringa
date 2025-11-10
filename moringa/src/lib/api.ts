@@ -15,14 +15,14 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // Trailing slash logic: skip for payment endpoints and order endpoints to avoid 307 redirects
+    // Trailing slash logic: always add trailing slash for FastAPI endpoints (except those with query params or file extensions)
     if (config.url && !config.url.includes('?') && !config.url.endsWith('/')) {
-      const isPayments = config.url.startsWith('/payments');
-      const isOrders = config.url.startsWith('/orders');
-      // Heuristic: path param that looks like a 24-char hex (Mongo ObjectId)
+      // Don't add slash if URL ends with a file extension or looks like an ObjectId
       const lastSegment = config.url.split('/').pop() || '';
+      const hasExtension = /\.[a-z0-9]+$/i.test(lastSegment);
       const looksLikeObjectId = /^[a-fA-F0-9]{24}$/.test(lastSegment);
-      if (!isPayments && !isOrders && !looksLikeObjectId) {
+      
+      if (!hasExtension && !looksLikeObjectId) {
         config.url = config.url + '/';
       }
     }
