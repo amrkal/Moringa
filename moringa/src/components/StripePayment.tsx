@@ -6,16 +6,14 @@ import { loadStripe } from '@stripe/stripe-js';
 import CheckoutForm from './CheckoutForm';
 import api from '@/lib/api';
 
-
 interface StripePaymentProps {
   orderId: string;
   amount: number;
   onSuccess: () => void;
   onCancel: () => void;
-  onFail?: (error: string) => void;
 }
 
-export default function StripePayment({ orderId, amount, onSuccess, onCancel, onFail }: StripePaymentProps) {
+export default function StripePayment({ orderId, amount, onSuccess, onCancel }: StripePaymentProps) {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(true);
@@ -77,7 +75,6 @@ export default function StripePayment({ orderId, amount, onSuccess, onCancel, on
   };
 
   if (error) {
-    if (onFail) onFail(error);
     return (
       <div className="p-6 bg-destructive/10 border border-destructive rounded-xl">
         <p className="text-destructive font-semibold mb-2">Payment Error</p>
@@ -136,9 +133,7 @@ export default function StripePayment({ orderId, amount, onSuccess, onCancel, on
         <CheckoutForm 
           onSuccess={onSuccess} 
           onCancel={onCancel}
-          onFail={onFail}
           amount={amount}
-          orderId={orderId}
         />
       </Elements>
     </div>
