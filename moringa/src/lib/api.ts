@@ -15,8 +15,14 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // No trailing slash logic - backend routes expect NO trailing slashes
-    // (FastAPI router with empty string pattern: @router.get("") expects /api/v1/settings NOT /api/v1/settings/)
+    // Remove trailing slashes from URLs to match backend routes
+    // Backend uses @router.get("") pattern which expects NO trailing slashes
+    if (config.url) {
+      // Remove trailing slash before query params: /api/v1/categories/?param=value → /api/v1/categories?param=value
+      config.url = config.url.replace(/\/(\?)/, '$1');
+      // Remove trailing slash at end: /api/v1/categories/ → /api/v1/categories
+      config.url = config.url.replace(/\/$/, '');
+    }
     
     // Prefer admin token but fall back to customer token so both flows work
     const adminToken = localStorage.getItem('token');
@@ -267,7 +273,7 @@ export const ordersApi = {
     status?: string;
     user_id?: string;
   }) =>
-    api.get('/orders/', { params }),
+    api.get('/orders', { params }),
   
   getById: (id: string) =>
     api.get(`/orders/${id}`),
