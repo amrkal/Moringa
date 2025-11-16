@@ -1,13 +1,3 @@
-import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
-
-export default defineConfig({
-  schema: "prisma/schema.prisma",
-  migrations: {
-    path: "prisma/migrations",
-  },
-  engine: "classic",
-  datasource: {
-    url: env("DATABASE_URL"),
-  },
-});
+// Deprecated Prisma config: Prisma removed from project.
+// Keeping this stub to avoid import errors if tooling scans for this file.
+export default {} as any;

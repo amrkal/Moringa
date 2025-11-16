@@ -151,12 +151,23 @@ export default function MenuPage() {
     }, 1000); // Give enough time for smooth scroll to complete
   };
   
-  // Initialize selected category only once when categories load
+  // Initialize selected category from URL (?c=<categoryId>) or first category (client-side)
   useEffect(() => {
-    if (categoriesData.length > 0 && !selectedCategory) {
+    if (categoriesData.length === 0) return;
+    try {
+      const fromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('c') || '' : '';
+      const validIds = new Set(categoriesData.map(c => c.id || ''));
+      if (fromUrl && validIds.has(fromUrl)) {
+        setSelectedCategory(fromUrl);
+        setTimeout(() => handleSelectCategory(fromUrl), 50);
+        return;
+      }
+    } catch {}
+    if (!selectedCategory) {
       setSelectedCategory(categoriesData[0].id || '');
     }
-  }, [categoriesData, selectedCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriesData]);
 
   
   // Scroll spy - Update selected category based on scroll position
