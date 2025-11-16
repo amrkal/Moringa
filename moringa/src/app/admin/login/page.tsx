@@ -112,14 +112,6 @@ export default function AdminLogin() {
                 )}
               </button>
             </div>
-
-            <div className="mt-4 p-4 bg-[hsl(var(--muted))] rounded-md">
-              <h4 className="text-sm font-medium text-[hsl(var(--foreground))] mb-2">Demo Credentials:</h4>
-              <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                <p>Phone: +254700000000</p>
-                <p>Password: admin123</p>
-              </div>
-            </div>
           </form>
         </div>
       </div>
