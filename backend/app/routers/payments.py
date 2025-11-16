@@ -16,7 +16,10 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import os
 import uuid
-import stripe
+try:  # Make Stripe optional so demo mode doesn't require the package
+    import stripe  # type: ignore
+except Exception:  # ModuleNotFoundError or others
+    stripe = None  # Stripe is optional; endpoints will guard real calls
 try:
     # Older versions expose error classes under stripe.error
     from stripe.error import StripeError, SignatureVerificationError  # type: ignore
@@ -33,8 +36,10 @@ from datetime import datetime
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 # Initialize Stripe (empty string if not provided)
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+_secret = os.getenv("STRIPE_SECRET_KEY", "")
+if stripe is not None:
+    stripe.api_key = _secret
 
 
 
@@ -87,6 +92,9 @@ async def create_payment_intent(request: CreatePaymentIntentRequest, db=Depends(
             return PaymentIntentResponse(client_secret=simulated_client_secret, payment_intent_id=pi_id)
 
         # Real Stripe integration
+        if stripe is None:
+            raise HTTPException(status_code=500, detail="Stripe SDK is not installed on the server")
+
         payment_intent = stripe.PaymentIntent.create(
             amount=int(request.amount * 100),
             currency=request.currency,
@@ -117,6 +125,8 @@ async def stripe_webhook(request: Request, stripe_signature: Optional[str] = Hea
     Handle Stripe webhook events for payment confirmation
     """
     payload = await request.body()
+    if stripe is None:
+        raise HTTPException(status_code=503, detail="Stripe SDK not available on this server")
     
     try:
         event = stripe.Webhook.construct_event(
