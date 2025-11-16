@@ -6,7 +6,7 @@ from .. import crud, models, schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.CategoryWithMealCount])
+@router.get("", response_model=List[schemas.CategoryWithMealCount])
 async def read_categories(
     skip: int = 0,
     limit: int = 100,
@@ -25,7 +25,7 @@ async def read_categories(
         response.append(schemas.CategoryWithMealCount(**data))
     return response
 
-@router.post("/", response_model=schemas.Category)
+@router.post("", response_model=schemas.Category)
 async def create_category(
     *,
     category_in: schemas.CategoryCreate,

@@ -6,7 +6,7 @@ from .. import crud, models, schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.Meal])
+@router.get("", response_model=List[schemas.Meal])
 async def read_meals(
     skip: int = 0,
     limit: int = 100,
@@ -24,7 +24,7 @@ async def read_meals(
     else:
         return await crud.crud_meal.get_multi(skip=skip, limit=limit, active_only=active_only)
 
-@router.post("/", response_model=schemas.Meal)
+@router.post("", response_model=schemas.Meal)
 async def create_meal(
     *,
     meal_in: schemas.MealCreate,
