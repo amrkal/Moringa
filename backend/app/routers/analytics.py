@@ -83,24 +83,28 @@ async def get_daily_sales(
     days: int = Query(default=30, ge=1, le=365),
     current_user: models.User = Depends(get_current_admin_user)
 ):
-    """Get daily sales data for the last N days"""
-    
+    """Get daily sales data for the last N days.
+
+    Includes total orders (all statuses), delivered_orders, and delivered revenue per day.
+    """
+
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     start_date = today - timedelta(days=days)
-    
+
     orders = await models.Order.find(
         models.Order.created_at >= start_date
     ).to_list()
-    
+
     # Group by date
-    daily_stats = defaultdict(lambda: {"orders": 0, "revenue": 0})
-    
+    daily_stats = defaultdict(lambda: {"orders": 0, "delivered_orders": 0, "revenue": 0})
+
     for order in orders:
         date_key = order.created_at.strftime("%Y-%m-%d")
         daily_stats[date_key]["orders"] += 1
         if order.status == models.OrderStatus.DELIVERED:
+            daily_stats[date_key]["delivered_orders"] += 1
             daily_stats[date_key]["revenue"] += float(order.total_amount)
-    
+
     # Format response
     result = []
     for i in range(days):
@@ -109,9 +113,10 @@ async def get_daily_sales(
         result.append({
             "date": date_key,
             "orders": daily_stats[date_key]["orders"],
+            "delivered_orders": daily_stats[date_key]["delivered_orders"],
             "revenue": round(daily_stats[date_key]["revenue"], 2)
         })
-    
+
     return result
 
 
@@ -201,29 +206,36 @@ async def get_monthly_sales(
 async def get_popular_meals(
     limit: int = Query(default=10, ge=1, le=50),
     days: Optional[int] = Query(default=None, ge=1, le=365),
+    delivered_only: bool = Query(default=True),
     current_user: models.User = Depends(get_current_admin_user)
 ):
-    """Get most popular meals by order count"""
-    
+    """Get most popular meals by order count.
+
+    By default counts SOLD items only from DELIVERED orders so it matches delivered revenue.
+    Set delivered_only=false to include all orders regardless of status.
+    """
     # Build query
     query = {}
     if days:
         start_date = datetime.utcnow() - timedelta(days=days)
         query["created_at"] = {"$gte": start_date}
-    
+
     orders = await models.Order.find(query).to_list()
-    
+
     # Count meal occurrences
     meal_stats = defaultdict(lambda: {"name": "", "count": 0, "revenue": 0})
-    
+
     for order in orders:
+        # Skip non-delivered orders when delivered_only is true
+        if delivered_only and order.status != models.OrderStatus.DELIVERED:
+            continue
         for item in order.items:
             meal_id = item.meal_id
             meal_stats[meal_id]["name"] = item.meal_name
             meal_stats[meal_id]["count"] += item.quantity
             if order.status == models.OrderStatus.DELIVERED:
                 meal_stats[meal_id]["revenue"] += float(item.subtotal)
-    
+
     # Sort by count and limit
     sorted_meals = sorted(
         [
@@ -231,14 +243,14 @@ async def get_popular_meals(
                 "meal_id": meal_id,
                 "meal_name": stats["name"],
                 "order_count": stats["count"],
-                "revenue": round(stats["revenue"], 2)
+                "revenue": round(stats["revenue"], 2),
             }
             for meal_id, stats in meal_stats.items()
         ],
         key=lambda x: x["order_count"],
-        reverse=True
+        reverse=True,
     )[:limit]
-    
+
     return sorted_meals
 
 
@@ -309,17 +321,23 @@ async def get_orders_by_type(
 
 @router.get("/orders/by-status")
 async def get_orders_by_status(
+    days: Optional[int] = Query(default=None, ge=1, le=365),
     current_user: models.User = Depends(get_current_admin_user)
 ):
-    """Get current order distribution by status"""
-    
-    orders = await models.Order.find().to_list()
-    
+    """Get order distribution by status; optional days filter."""
+
+    query = {}
+    if days:
+        start_date = datetime.utcnow() - timedelta(days=days)
+        query["created_at"] = {"$gte": start_date}
+
+    orders = await models.Order.find(query).to_list()
+
     # Count by status
     status_stats = defaultdict(int)
     for order in orders:
         status_stats[order.status] += 1
-    
+
     # Format response
     result = []
     for status in models.OrderStatus:
@@ -327,8 +345,77 @@ async def get_orders_by_status(
             "status": status,
             "count": status_stats[status]
         })
-    
+
     return result
+
+
+@router.get("/payments/summary")
+async def get_payments_summary(
+    days: Optional[int] = Query(default=None, ge=1, le=365),
+    current_user: models.User = Depends(get_current_admin_user)
+):
+    """Payment analytics: counts by payment_status and simple failure/refund totals."""
+
+    query = {}
+    if days:
+        start_date = datetime.utcnow() - timedelta(days=days)
+        query["created_at"] = {"$gte": start_date}
+
+    orders = await models.Order.find(query).to_list()
+
+    counts = defaultdict(int)
+    for order in orders:
+        counts[order.payment_status] += 1
+
+    return {
+        "pending": counts[models.PaymentStatus.PENDING],
+        "paid": counts[models.PaymentStatus.PAID],
+        "failed": counts[models.PaymentStatus.FAILED],
+        "refunded": counts[models.PaymentStatus.REFUNDED],
+        "total": len(orders),
+    }
+
+
+@router.get("/summary")
+async def get_analytics_summary(
+    days: Optional[int] = Query(default=None, ge=1, le=365),
+    current_user: models.User = Depends(get_current_admin_user)
+):
+    """Unified summary for dashboard top strip.
+
+    Returns total orders (all statuses), delivered orders, delivered revenue, delivered AOV,
+    delivered sold meals count, and payment failure/refund counts for the range.
+    If days is None, computes all-time.
+    """
+
+    query = {}
+    if days:
+        start_date = datetime.utcnow() - timedelta(days=days)
+        query["created_at"] = {"$gte": start_date}
+
+    orders = await models.Order.find(query).to_list()
+
+    total_orders = len(orders)
+    delivered_orders = [o for o in orders if o.status == models.OrderStatus.DELIVERED]
+    delivered_count = len(delivered_orders)
+    revenue_delivered = sum(float(o.total_amount) for o in delivered_orders)
+    sold_meals_delivered = sum(
+        sum(item.quantity for item in o.items) for o in delivered_orders
+    )
+    aov_delivered = revenue_delivered / delivered_count if delivered_count else 0.0
+
+    failed_count = len([o for o in orders if o.payment_status == models.PaymentStatus.FAILED])
+    refunded_count = len([o for o in orders if o.payment_status == models.PaymentStatus.REFUNDED])
+
+    return {
+        "orders_total": total_orders,
+        "orders_delivered": delivered_count,
+        "revenue_delivered": round(revenue_delivered, 2),
+        "aov_delivered": round(aov_delivered, 2),
+        "sold_meals_delivered": sold_meals_delivered,
+        "payment_failures": failed_count,
+        "refunds": refunded_count,
+    }
 
 
 @router.get("/revenue/trends")

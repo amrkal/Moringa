@@ -43,7 +43,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-  const response = await api.get('/users/');
+  const response = await api.get('/users');
       setUsers(response.data || []);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedLoadUsers', language));

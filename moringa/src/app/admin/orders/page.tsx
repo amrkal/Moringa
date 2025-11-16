@@ -34,6 +34,7 @@ interface Order {
   order_number: string;
   user_id: string;
   status: string;
+  order_type: string;
   total_amount: number;
   delivery_address?: string;
   phone?: string;
@@ -77,6 +78,7 @@ export default function OrdersPage() {
         order_number: o.order_number || (o.id || o._id || '').toString().slice(-6),
         user_id: o.user_id,
         status: o.status,
+        order_type: o.order_type || 'DELIVERY',
         total_amount: o.total_amount ?? o.total ?? 0,
         delivery_address: o.delivery_address,
         phone: o.customer_phone || o.phone,
@@ -130,6 +132,15 @@ export default function OrdersPage() {
         {statusOption.label}
       </span>
     );
+  };
+
+  // Filter status options based on order type
+  const getAvailableStatuses = (orderType: string) => {
+    if (orderType === 'DINE_IN' || orderType === 'TAKE_AWAY') {
+      // Exclude OUT_FOR_DELIVERY for non-delivery orders
+      return statusOptions.filter(opt => opt.value !== 'OUT_FOR_DELIVERY');
+    }
+    return statusOptions;
   };
 
   if (loading) {
@@ -244,7 +255,7 @@ export default function OrdersPage() {
                             onChange={(e) => updateStatus(order.id, e.target.value)}
                             className="px-3 py-1.5 border border-border rounded-xl bg-card text-foreground text-xs font-medium hover:bg-muted transition-all"
                           >
-                            {statusOptions.map((opt) => (
+                            {getAvailableStatuses(order.order_type).map((opt) => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>

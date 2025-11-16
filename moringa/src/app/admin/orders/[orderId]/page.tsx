@@ -153,7 +153,7 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Order Header */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6 mb-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 mb-6">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Order #{order.order_number}</h1>
@@ -171,7 +171,7 @@ export default function OrderDetailPage() {
 
           {/* Status Update Buttons */}
           <div className="mt-6 flex flex-wrap gap-2 print:hidden">
-            {order.status !== 'CONFIRMED' && order.status !== 'CANCELLED' && (
+            {order.status === 'PENDING' && (
               <button
                 onClick={() => updateStatus('CONFIRMED')}
                 disabled={updating}
@@ -198,6 +198,7 @@ export default function OrderDetailPage() {
                 Mark as Ready
               </button>
             )}
+            {/* Only show delivery status for DELIVERY orders */}
             {order.status === 'READY' && order.order_type === 'DELIVERY' && (
               <button
                 onClick={() => updateStatus('OUT_FOR_DELIVERY')}
@@ -207,7 +208,10 @@ export default function OrderDetailPage() {
                 Out for Delivery
               </button>
             )}
-            {(order.status === 'READY' || order.status === 'OUT_FOR_DELIVERY') && (
+            {/* For DELIVERY: show Complete after OUT_FOR_DELIVERY */}
+            {/* For DINE_IN/TAKE_AWAY: show Complete directly after READY */}
+            {((order.order_type === 'DELIVERY' && order.status === 'OUT_FOR_DELIVERY') || 
+              ((order.order_type === 'DINE_IN' || order.order_type === 'TAKE_AWAY') && order.status === 'READY')) && (
               <button
                 onClick={() => updateStatus('DELIVERED')}
                 disabled={updating}
@@ -232,11 +236,11 @@ export default function OrderDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Order Items */}
-            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
               <div className="space-y-4">
                 {order.items.map((item, idx) => (
-                  <div key={idx} className="pb-4 border-b border-gray-200 dark:border-neutral-800 last:border-0">
+                  <div key={idx} className="pb-4 border-b border-border last:border-0">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <h3 className="font-semibold text-foreground">
@@ -280,7 +284,7 @@ export default function OrderDetailPage() {
               </div>
 
               {/* Totals */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-neutral-800 space-y-2">
+              <div className="mt-6 pt-6 border-t border-border space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="font-medium text-foreground">{formatCurrency(order.subtotal, language)}</span>
@@ -297,7 +301,7 @@ export default function OrderDetailPage() {
                     <span className="font-medium text-foreground">{formatCurrency(order.delivery_fee, language)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-neutral-800">
+                <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                   <span className="text-foreground">Total</span>
                   <span className="text-primary">{formatCurrency(order.total_amount, language)}</span>
                 </div>
@@ -306,7 +310,7 @@ export default function OrderDetailPage() {
 
             {/* Status History */}
             {order.status_history && order.status_history.length > 0 && (
-              <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
+              <div className="bg-card rounded-xl shadow-sm border border-border p-6">
                 <h2 className="text-xl font-bold text-foreground mb-4">Status History</h2>
                 <div className="space-y-4">
                   {order.status_history.map((history, idx) => (
@@ -343,7 +347,7 @@ export default function OrderDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Customer Info */}
-            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">Customer Information</h2>
               <div className="space-y-3">
                 <div>
@@ -368,7 +372,7 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Order Details */}
-            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">Order Details</h2>
               <div className="space-y-3">
                 <div>

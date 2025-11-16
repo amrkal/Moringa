@@ -232,7 +232,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           if (enabled) {
             const audio = new Audio('/notification.mp3');
             audio.volume = 0.5;
-            audio.play().catch(err => console.log('Could not play notification sound:', err));
+            audio.onerror = () => {
+              // Silently handle missing audio file - only log once
+              if (!sessionStorage.getItem('audioWarningShown')) {
+                console.warn('Notification sound file not found. Please add notification.mp3 to the public folder.');
+                sessionStorage.setItem('audioWarningShown', 'true');
+              }
+            };
+            audio.play().catch(() => {});
           }
         } catch (error) {
           // Ignore sound errors silently

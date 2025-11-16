@@ -18,9 +18,9 @@ import { ButtonSpinner } from '@/components/ui/spinner';
 import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import PhoneVerification from '@/components/PhoneVerification';
 import api from '@/lib/api';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 // Dynamically import Stripe payment component (client-side only)
 const StripePayment = dynamic(() => import('@/components/StripePayment'), {
@@ -42,6 +42,8 @@ interface Settings {
   accept_cash: boolean;
   accept_card: boolean;
   accept_mobile_money: boolean;
+  delivery_fee: number;
+  tax_rate: number;
 }
 
 export default function CheckoutPage() {
@@ -49,8 +51,8 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { language } = useLanguage();
   const { isAuthenticated, user, verifyPhone } = useAuth();
-  const { items, getTotalAmount, clearCart } = useCartStore();
   const { addNotification } = useNotifications();
+  const { items, getTotalAmount, clearCart } = useCartStore();
   const [settings, setSettings] = useState<Settings>({
     accept_delivery: true,
     accept_dine_in: true,
@@ -58,6 +60,8 @@ export default function CheckoutPage() {
     accept_cash: true,
     accept_card: true,
     accept_mobile_money: false,
+    delivery_fee: 5.0,
+    tax_rate: 0.15,
   });
   const [orderType, setOrderType] = useState<OrderType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CARD');
@@ -81,6 +85,8 @@ export default function CheckoutPage() {
             accept_cash: response.data.accept_cash ?? true,
             accept_card: response.data.accept_card ?? true,
             accept_mobile_money: response.data.accept_mobile_money ?? false,
+            delivery_fee: response.data.delivery_fee ?? 5.0,
+            tax_rate: response.data.tax_rate ?? 0.15,
           };
           setSettings(newSettings);
 
@@ -147,8 +153,8 @@ export default function CheckoutPage() {
   }
 
   const subtotal = getTotalAmount();
-  const deliveryFee = orderType === 'DELIVERY' ? 2.99 : 0;
-  const tax = subtotal * 0.08;
+  const deliveryFee = orderType === 'DELIVERY' ? settings.delivery_fee : 0;
+  const tax = subtotal * settings.tax_rate;
   const total = subtotal + deliveryFee + tax;
 
   const placeOrder = async (skipAuthCheck: boolean = false) => {
@@ -271,7 +277,7 @@ export default function CheckoutPage() {
         // For CASH or WALLET, complete the order immediately
         toast.success('Order placed successfully!');
         
-        // Trigger notification for admin - show only trailing numeric digits (up to 6)
+        // Order placed successfully - trigger notification for admin
         const rawOrderNumber = orderData.order_number || String(orderData.id || orderData._id || '');
         const digitsMatch = String(rawOrderNumber).match(/(\d+)/g);
         const trailing = digitsMatch && digitsMatch.length ? digitsMatch[digitsMatch.length - 1] : String(rawOrderNumber).replace(/\D/g, '');
@@ -380,56 +386,24 @@ export default function CheckoutPage() {
         <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-accent/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }}></div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 md:py-4 pb-6 sm:pb-8">
         <div className="max-w-6xl mx-auto">
-          <div className="mb-6 sm:mb-8">
-            <Link href="/cart">
-              <Button variant="ghost" className="mb-4 hover:bg-accent rounded-xl">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {getTranslation('common', 'cart', language)}
-              </Button>
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+          <div className="mb-4 sm:mb-5">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               {getTranslation('common', 'checkout', language)}
             </h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Complete your order in a few easy steps</p>
-
-            {/* Step indicator */}
-            <div className="mt-6">
-              <div className="relative flex items-center justify-between max-w-md mx-auto">
-                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -z-10"></div>
-                {[
-                  { key: 'Cart', active: false, done: true },
-                  { key: 'Details', active: true, done: false },
-                  { key: 'Confirm', active: false, done: false },
-                ].map((step, idx) => (
-                  <div key={step.key} className="flex flex-col items-center gap-2 w-1/3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                      step.active
-                        ? 'bg-gradient-to-br from-primary to-accent border-primary text-white scale-105 shadow-md'
-                        : step.done
-                        ? 'bg-primary/10 border-primary/20 text-primary'
-                        : 'bg-background border-border text-muted-foreground'
-                    }`}>
-                      <span className="text-xs sm:text-sm font-bold">{idx + 1}</span>
-                    </div>
-                    <span className={`text-xs sm:text-sm ${step.active ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>{step.key}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               {/* Order Type */}
-              <Card className="border-border/50 rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold tracking-tight">{getTranslation('common', 'orderType', language)}</CardTitle>
+              <Card className="border-border/50 rounded-lg sm:rounded-xl overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+                <CardHeader className="p-3 sm:p-4">
+                  <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{getTranslation('common', 'orderType', language)}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className={`grid gap-3 sm:gap-4 ${
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className={`grid gap-2 sm:gap-3 md:gap-4 ${
                     [settings.accept_delivery, settings.accept_dine_in, settings.accept_takeaway].filter(Boolean).length === 3
                       ? 'grid-cols-1 sm:grid-cols-3'
                       : [settings.accept_delivery, settings.accept_dine_in, settings.accept_takeaway].filter(Boolean).length === 2
@@ -437,10 +411,10 @@ export default function CheckoutPage() {
                       : 'grid-cols-1'
                   }`}>
                     {settings.accept_delivery && (
-                      <button
+                        <button
                         type="button"
                         onClick={() => setOrderType('DELIVERY')}
-                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
+                          className={`p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                           orderType === 'DELIVERY' 
                             ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
                             : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
@@ -451,17 +425,17 @@ export default function CheckoutPage() {
                         {orderType === 'DELIVERY' && (
                           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 animate-shimmer" />
                         )}
-                        <Truck className={`mx-auto h-8 w-8 sm:h-10 sm:w-10 mb-2 transition-transform ${orderType === 'DELIVERY' ? 'scale-110' : 'group-hover:scale-110'}`} />
+                        <Truck className={`mx-auto h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 mb-1 sm:mb-2 transition-transform ${orderType === 'DELIVERY' ? 'scale-110' : 'group-hover:scale-110'}`} />
                         <div className="font-semibold text-sm sm:text-base relative">{getTranslation('common', 'delivery', language)}</div>
                         <div className="text-xs sm:text-sm text-muted-foreground relative">30-45 {getTranslation('common', 'minutes', language)}</div>
                       </button>
                     )}
                     
                     {settings.accept_dine_in && (
-                      <button
+                        <button
                         type="button"
                         onClick={() => setOrderType('DINE_IN')}
-                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
+                          className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                           orderType === 'DINE_IN' 
                             ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
                             : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
@@ -479,10 +453,10 @@ export default function CheckoutPage() {
                     )}
                     
                     {settings.accept_takeaway && (
-                      <button
+                        <button
                         type="button"
                         onClick={() => setOrderType('TAKEAWAY')}
-                        className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] ${
+                          className={`p-4 sm:p-5 rounded-xl border-2 text-center transition-all group relative overflow-hidden min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                           orderType === 'TAKEAWAY' 
                             ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 text-primary shadow-lg scale-[1.02]' 
                             : 'border-border hover:border-primary/50 hover:shadow-sm hover:scale-[1.02]'
@@ -512,13 +486,13 @@ export default function CheckoutPage() {
 
               {/* Delivery Address - Only for Delivery */}
               {orderType === 'DELIVERY' && (
-                <Card className="border-border/50 rounded-2xl overflow-hidden animate-fade-in" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold tracking-tight">{getTranslation('common', 'deliveryInformation', language)}</CardTitle>
+                <Card className="border-border/50 rounded-xl sm:rounded-2xl overflow-hidden animate-fade-in" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+                  <CardHeader className="p-3 sm:p-4 md:p-4">
+                    <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{getTranslation('common', 'deliveryInformation', language)}</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 md:space-y-3.5 p-3 sm:p-4 md:p-4 pt-0">
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">
                         {getTranslation('common', 'deliveryAddressLabel', language)} *
                       </label>
                       <Textarea
@@ -527,11 +501,12 @@ export default function CheckoutPage() {
                         onChange={(e) => setDeliveryAddress(e.target.value)}
                         required
                         rows={3}
+                        className="text-xs sm:text-sm"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
+                      <label className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">
                         {getTranslation('common', 'specialInstructions', language)} ({getTranslation('common', 'optional', language)})
                       </label>
                       <Textarea
@@ -539,6 +514,7 @@ export default function CheckoutPage() {
                         value={specialInstructions}
                         onChange={(e) => setSpecialInstructions(e.target.value)}
                         rows={3}
+                        className="text-xs sm:text-sm"
                       />
                     </div>
                   </CardContent>
@@ -547,17 +523,17 @@ export default function CheckoutPage() {
 
               {/* Payment Method - Only for Delivery */}
               {orderType === 'DELIVERY' && (
-                <Card className="border-border/50 rounded-2xl overflow-hidden animate-fade-in" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold tracking-tight">{getTranslation('common', 'paymentMethod', language)}</CardTitle>
+                <Card className="border-border/50 rounded-xl sm:rounded-2xl overflow-hidden animate-fade-in" style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+                  <CardHeader className="p-3 sm:p-4 md:p-4">
+                    <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{getTranslation('common', 'paymentMethod', language)}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
+                  <CardContent className="p-3 sm:p-4 md:p-4 pt-0">
+                    <div className="space-y-2 sm:space-y-3">
                       {settings.accept_card && (
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('CARD')}
-                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
+                          className={`w-full p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 text-left flex items-center gap-2 sm:gap-3 md:gap-4 transition-all relative overflow-hidden group min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                             paymentMethod === 'CARD' 
                               ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
                               : 'border-border hover:border-primary/50 hover:shadow-sm'
@@ -568,16 +544,16 @@ export default function CheckoutPage() {
                           {paymentMethod === 'CARD' && (
                             <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
                           )}
-                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'CARD' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all`}>
-                            <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
+                          <div className={`p-1.5 sm:p-2 md:p-3 rounded-lg ${paymentMethod === 'CARD' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all`}>
+                            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                           </div>
                           <div className="flex-1 relative">
-                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'card', language)}</div>
-                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payByCard', language)}</div>
+                            <div className="font-semibold text-xs sm:text-sm md:text-base">{getTranslation('common', 'card', language)}</div>
+                            <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">{getTranslation('common', 'payByCard', language)}</div>
                           </div>
                           {paymentMethod === 'CARD' && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -587,7 +563,7 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('CASH')}
-                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
+                          className={`w-full p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 text-left flex items-center gap-2 sm:gap-3 md:gap-4 transition-all relative overflow-hidden group min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                             paymentMethod === 'CASH' 
                               ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
                               : 'border-border hover:border-primary/50 hover:shadow-sm'
@@ -598,16 +574,16 @@ export default function CheckoutPage() {
                           {paymentMethod === 'CASH' && (
                             <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
                           )}
-                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'CASH' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all font-bold text-base sm:text-lg flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12`}>
+                          <div className={`p-1.5 sm:p-2 md:p-3 rounded-lg ${paymentMethod === 'CASH' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all font-bold text-sm sm:text-base md:text-lg flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12`}>
                             $
                           </div>
                           <div className="flex-1 relative">
-                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'cash', language)}</div>
-                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payOnDelivery', language)}</div>
+                            <div className="font-semibold text-xs sm:text-sm md:text-base">{getTranslation('common', 'cash', language)}</div>
+                            <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">{getTranslation('common', 'payOnDelivery', language)}</div>
                           </div>
                           {paymentMethod === 'CASH' && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -617,7 +593,7 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('WALLET')}
-                          className={`w-full p-4 rounded-xl border-2 text-left flex items-center gap-3 sm:gap-4 transition-all relative overflow-hidden group min-h-[44px] ${
+                          className={`w-full p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 text-left flex items-center gap-2 sm:gap-3 md:gap-4 transition-all relative overflow-hidden group min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                             paymentMethod === 'WALLET' 
                               ? 'border-primary bg-gradient-to-br from-primary/10 to-accent/5 shadow-lg' 
                               : 'border-border hover:border-primary/50 hover:shadow-sm'
@@ -628,16 +604,16 @@ export default function CheckoutPage() {
                           {paymentMethod === 'WALLET' && (
                             <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
                           )}
-                          <div className={`p-2 sm:p-3 rounded-lg ${paymentMethod === 'WALLET' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all text-base sm:text-lg flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12`}>
+                          <div className={`p-1.5 sm:p-2 md:p-3 rounded-lg ${paymentMethod === 'WALLET' ? 'bg-gradient-to-br from-primary to-accent text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'} transition-all text-sm sm:text-base md:text-lg flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12`}>
                             📱
                           </div>
                           <div className="flex-1 relative">
-                            <div className="font-semibold text-sm sm:text-base">{getTranslation('common', 'wallet', language)}</div>
-                            <div className="text-xs sm:text-sm text-muted-foreground">{getTranslation('common', 'payByWallet', language)}</div>
+                            <div className="font-semibold text-xs sm:text-sm md:text-base">{getTranslation('common', 'wallet', language)}</div>
+                            <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">{getTranslation('common', 'payByWallet', language)}</div>
                           </div>
                           {paymentMethod === 'WALLET' && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                             </div>
                           )}
                         </button>
@@ -675,21 +651,21 @@ export default function CheckoutPage() {
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-20 shadow-lg border-border">
-                <CardHeader className="bg-gradient-to-br from-primary/5 to-accent/5">
-                  <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-primary" />
+              <Card className="sticky top-20 shadow-lg border-border rounded-xl sm:rounded-2xl">
+                <CardHeader className="bg-gradient-to-br from-primary/5 to-accent/5 p-3 sm:p-4 md:p-4">
+                  <CardTitle className="text-base sm:text-lg md:text-xl font-bold flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     {getTranslation('common', 'orderSummary', language)}
                   </CardTitle>
                 </CardHeader>
                 
-                <CardContent className="space-y-4 pt-4">
+                <CardContent className="space-y-2.5 sm:space-y-3 pt-3 sm:pt-3 p-3 sm:p-4 md:p-4">
                   {/* Items */}
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  <div className="space-y-1.5 sm:space-y-2 max-h-40 sm:max-h-48 overflow-y-auto pr-1 sm:pr-2">
                     {items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-xs sm:text-sm gap-2">
-                        <span className="flex-1 min-w-0">
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold mr-2">{item.quantity}</span>
+                      <div key={item.id} className="flex justify-between text-[10px] sm:text-xs md:text-sm gap-1.5 sm:gap-2">
+                        <span className="flex-1 min-w-0 flex items-center">
+                          <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary/10 text-primary text-[9px] sm:text-xs font-bold mr-1.5 sm:mr-2 flex-shrink-0">{item.quantity}</span>
                           <span className="line-clamp-1">{item.meal.name}</span>
                         </span>
                         <span className="font-semibold tabular-nums shrink-0">{formatPrice(item.totalPrice, language)}</span>
@@ -697,49 +673,51 @@ export default function CheckoutPage() {
                     ))}
                   </div>
                   
-                  <div className="border-t border-border pt-3 space-y-2">
-                    <div className="flex justify-between text-xs sm:text-sm">
+                  <div className="border-t border-border pt-2.5 sm:pt-3 space-y-1.5 sm:space-y-2">
+                    <div className="flex justify-between text-[10px] sm:text-xs md:text-sm">
                       <span className="text-muted-foreground">{getTranslation('common', 'subtotal', language)}</span>
                       <span className="font-semibold tabular-nums">{formatPrice(subtotal, language)}</span>
                     </div>
                     
                     {orderType === 'DELIVERY' && (
-                      <div className="flex justify-between text-xs sm:text-sm">
+                      <div className="flex justify-between text-[10px] sm:text-xs md:text-sm">
                         <span className="text-muted-foreground">{getTranslation('common', 'deliveryFee', language)}</span>
                         <span className="font-semibold tabular-nums">{formatPrice(deliveryFee, language)}</span>
                       </div>
                     )}
                     
-                    <div className="flex justify-between text-xs sm:text-sm">
-                      <span className="text-muted-foreground">{getTranslation('common', 'tax', language)}</span>
-                      <span className="font-semibold tabular-nums">{formatPrice(tax, language)}</span>
-                    </div>
+                    {settings.tax_rate > 0 && (
+                      <div className="flex justify-between text-[10px] sm:text-xs md:text-sm">
+                        <span className="text-muted-foreground">{getTranslation('common', 'tax', language)} ({(settings.tax_rate * 100).toFixed(0)}%)</span>
+                        <span className="font-semibold tabular-nums">{formatPrice(tax, language)}</span>
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="border-t border-border pt-3">
+                  <div className="border-t border-border pt-2 sm:pt-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-base sm:text-lg font-bold">{getTranslation('common', 'total', language)}</span>
-                      <span className="text-xl sm:text-2xl font-bold text-primary tabular-nums">{formatPrice(total, language)}</span>
+                      <span className="text-sm sm:text-base md:text-lg font-bold">{getTranslation('common', 'total', language)}</span>
+                      <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary tabular-nums">{formatPrice(total, language)}</span>
                     </div>
                   </div>
                 </CardContent>
                 
-                <CardContent className="bg-muted/20 pt-0">
+                <CardContent className="bg-muted/20 pt-0 p-3 sm:p-4 md:p-4">
                   <Button
                     type="submit"
                     size="xl"
-                    className="w-full bg-gradient-to-r from-primary to-accent text-white hover:from-primary/90 hover:to-accent/90 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[44px]"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[48px] sm:min-h-[52px] md:min-h-[56px] rounded-lg sm:rounded-xl font-bold text-sm sm:text-base md:text-lg hover:scale-[1.02] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     disabled={isSubmitting || (orderType === 'DELIVERY' && !deliveryAddress)}
                     aria-label="Place order"
                     title={`Place order - ${formatPrice(total, language)}`}
                   >
                     {isSubmitting ? (
-                      <span className="flex items-center gap-2 text-sm sm:text-base">
+                      <span className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
                         <ButtonSpinner />
                         {getTranslation('common', 'placeOrder', language)}...
                       </span>
                     ) : (
-                      <span className="text-sm sm:text-base">{getTranslation('common', 'placeOrder', language)} - {formatPrice(total, language)}</span>
+                      <span className="text-sm sm:text-base md:text-lg">{getTranslation('common', 'placeOrder', language)} • {formatPrice(total, language)}</span>
                     )}
                   </Button>
                   {!isAuthenticated && (
@@ -777,9 +755,9 @@ export default function CheckoutPage() {
                   Secure checkout
                 </p>
               </div>
-              <button
+                <button
                 onClick={handlePaymentCancel}
-                className="p-2 hover:bg-muted rounded-full transition-colors"
+                  className="p-2 hover:bg-muted rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 aria-label="Close payment modal"
               >
                 <X className="h-5 w-5 text-muted-foreground" />
@@ -809,9 +787,9 @@ export default function CheckoutPage() {
                   We'll send an STK Push to your phone
                 </p>
               </div>
-              <button
+                <button
                 onClick={handleMpesaCancel}
-                className="p-2 hover:bg-muted rounded-full transition-colors"
+                  className="p-2 hover:bg-muted rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 aria-label="Close payment modal"
               >
                 <X className="h-5 w-5 text-muted-foreground" />

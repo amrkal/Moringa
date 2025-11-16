@@ -583,6 +583,81 @@ export const translations = {
       en: 'min',
       ar: 'دقيقة',
       he: 'דק׳'
+    },
+    orderSingular: {
+      en: 'order',
+      ar: 'طلب',
+      he: 'הזמנה'
+    },
+    ordersPlural: {
+      en: 'orders',
+      ar: 'طلبات',
+      he: 'הזמנות'
+    },
+    trackOrderHistory: {
+      en: 'Track your order history',
+      ar: 'تتبع سجل طلباتك',
+      he: 'עקוב אחר היסטוריית ההזמנות שלך'
+    },
+    orderProgress: {
+      en: 'Order Progress',
+      ar: 'تقدم الطلب',
+      he: 'התקדמות הזמנה'
+    },
+    item: {
+      en: 'item',
+      ar: 'عنصر',
+      he: 'פריט'
+    },
+    items: {
+      en: 'items',
+      ar: 'عناصر',
+      he: 'פריטים'
+    },
+    each: {
+      en: 'each',
+      ar: 'لكل واحد',
+      he: 'לכל אחד'
+    },
+    viewDetails: {
+      en: 'View Details',
+      ar: 'عرض التفاصيل',
+      he: 'הצג פרטים'
+    },
+    hideDetails: {
+      en: 'Hide Details',
+      ar: 'إخفاء التفاصيل',
+      he: 'הסתר פרטים'
+    },
+    processing: {
+      en: 'Processing...',
+      ar: 'جاري المعالجة...',
+      he: 'מעבד...'
+    },
+    itemsAddedToCart: {
+      en: 'Items added to cart!',
+      ar: 'تمت إضافة العناصر إلى السلة!',
+      he: 'הפריטים נוספו לעגלה!'
+    },
+    reorderFailed: {
+      en: 'Failed to reorder',
+      ar: 'فشل في إعادة الطلب',
+      he: 'נכשל בהזמנה מחדש'
+    },
+    orderCancelled: {
+      en: 'Order cancelled successfully',
+      ar: 'تم إلغاء الطلب بنجاح',
+      he: 'ההזמנה בוטלה בהצלחה'
+    },
+    cancelFailed: {
+      en: 'Failed to cancel order',
+      ar: 'فשל في إلغاء الطلب',
+      he: 'נכשל בביטול ההזמנה'
+    },
+    meal: {
+      en: 'Meal',
+      ar: 'وجبة',
+      he: 'מנה'
     }
   },
 

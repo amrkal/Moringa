@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getTranslation } from '@/lib/translations';
+// Removed getTranslation import (not used in this file)
 import { getLocalizedText } from '@/lib/i18n';
 import { MealImage } from '@/components/ui/optimized-image';
 import Image from 'next/image';
 import { Plus, Search, X, Flame, Leaf, Sparkles } from 'lucide-react';
-import Link from 'next/link';
-import BottomSheetCart from '@/components/BottomSheetCart';
+// Removed Link import (not used in this file)
+// BottomSheetCart intentionally removed from menu page to avoid any bottom bar overlay on mobile
 import { CategoryChipsSkeleton, MealGridSkeleton } from '@/components/Skeletons';
 import { formatPrice } from '@/lib/utils';
 import { useCartStore } from '@/store/cart';
@@ -32,7 +32,9 @@ export default function MenuPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const tabsOffset = 120;
+  const categoryBarRef = useRef<HTMLDivElement | null>(null);
+  const isScrollingProgrammatically = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const itemCount = useCartStore((s) => s.getItemCount());
   const totalAmount = useCartStore((s) => s.getTotalAmount());
 
@@ -116,44 +118,107 @@ export default function MenuPage() {
 
 
   const handleSelectCategory = (id: string) => {
-    setSelectedCategory(id);
     const el = sectionRefs.current[id];
-    if (el) {
-      const top = el.getBoundingClientRect().top + window.scrollY - tabsOffset;
-      window.scrollTo({ top, behavior: 'smooth' });
+    if (!el) return;
+    
+    // Mark that we're programmatically scrolling
+    isScrollingProgrammatically.current = true;
+    setSelectedCategory(id);
+    
+    // Get header heights
+    const nav = document.getElementById('app-top-nav');
+    const categoryBar = categoryBarRef.current;
+    const navHeight = nav?.offsetHeight || 0;
+    const categoryBarHeight = categoryBar?.offsetHeight || 0;
+    const totalOffset = navHeight + categoryBarHeight + 16; // 16px extra padding
+    
+    // Calculate scroll position
+    const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
+    const scrollToPosition = elementPosition - totalOffset;
+    
+    // Smooth scroll
+    window.scrollTo({
+      top: scrollToPosition,
+      behavior: 'smooth'
+    });
+    
+    // Reset programmatic scroll flag after animation completes
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
+    scrollTimeoutRef.current = setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 1000); // Give enough time for smooth scroll to complete
   };
-  // Set initial selected category to first available
+  
+  // Initialize selected category only once when categories load
   useEffect(() => {
     if (categoriesData.length > 0 && !selectedCategory) {
-      const firstCatId = categoriesData[0].id || '';
-      setSelectedCategory(firstCatId);
+      setSelectedCategory(categoriesData[0].id || '');
     }
   }, [categoriesData, selectedCategory]);
 
-  // Highlight active category based on scroll position
+  
+  // Scroll spy - Update selected category based on scroll position
   useEffect(() => {
-    const ids = categoriesData.map((c) => c.id || '').filter(Boolean);
-    if (ids.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // pick the entry closest to the top that is intersecting
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible?.target) {
-          const id = (visible.target as HTMLElement).dataset.sectionId || '';
-          if (id) setSelectedCategory(id);
+    const handleScroll = () => {
+      // Don't update during programmatic scrolling
+      if (isScrollingProgrammatically.current) return;
+      
+      const nav = document.getElementById('app-top-nav');
+      const categoryBar = categoryBarRef.current;
+      const navHeight = nav?.offsetHeight || 0;
+      const categoryBarHeight = categoryBar?.offsetHeight || 0;
+      const scrollOffset = navHeight + categoryBarHeight + 50; // 50px threshold
+      
+      // Find which section is currently in view
+      const scrollPosition = window.pageYOffset + scrollOffset;
+      
+      let currentSection = '';
+      categoriesData.forEach((category) => {
+        const sectionId = category.id || '';
+        const element = sectionRefs.current[sectionId];
+        
+        if (element) {
+          const sectionTop = element.offsetTop;
+          const sectionBottom = sectionTop + element.offsetHeight;
+          
+          if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+            currentSection = sectionId;
+          }
         }
-      },
-      { rootMargin: `-${tabsOffset}px 0px -70% 0px`, threshold: 0 }
-    );
-    ids.forEach((id) => {
-      const el = sectionRefs.current[id];
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [categoriesData, tabsOffset]);
+      });
+      
+      // Update selected category if we found a section
+      if (currentSection && currentSection !== selectedCategory) {
+        setSelectedCategory(currentSection);
+        
+        // Auto-scroll the category bar to show the active category
+        const categoryBar = categoryBarRef.current;
+        if (categoryBar) {
+          const activeButton = categoryBar.querySelector(`button[data-category-id="${currentSection}"]`);
+          if (activeButton) {
+            activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        }
+      }
+    };
+    
+    // Throttle scroll events for performance
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [categoriesData, selectedCategory]);
 
   if (loading) {
     return (
@@ -165,17 +230,17 @@ export default function MenuPage() {
         </div>
 
         {/* Promo banner skeleton space */}
-        <div className="pt-4" />
+        <div className="pt-1 sm:pt-2" />
 
         {/* Category chips skeleton */}
-        <div className="sticky top-20 z-40 bg-background/70 backdrop-blur-2xl border-b border-border/40">
-          <div className="container mx-auto px-4 py-2">
+        <div className="sticky top-16 sm:top-20 z-40 bg-background/70 backdrop-blur-2xl border-b border-border/40">
+          <div className="container mx-auto px-2 sm:px-4 py-1.5 sm:py-2">
             <CategoryChipsSkeleton count={6} />
           </div>
         </div>
 
         {/* Meal grid skeleton */}
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-2 sm:px-3 py-3 sm:py-4">
           <MealGridSkeleton cards={8} />
         </div>
       </div>
@@ -215,7 +280,7 @@ export default function MenuPage() {
   }
 
   return (
-  <div className="min-h-screen bg-background relative" dir={language === 'ar' || language === 'he' ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-background relative" dir={language === 'ar' || language === 'he' ? 'rtl' : 'ltr'}>
       {/* Premium animated background */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-primary/5 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
@@ -226,25 +291,25 @@ export default function MenuPage() {
       {searchOpen && (
         <>
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fadeIn" onClick={() => setSearchOpen(false)} />
-          <div className="fixed top-20 left-0 right-0 z-50 px-4 animate-slideDown" role="dialog" aria-modal="true" aria-label="Search">
+          <div className="fixed top-16 sm:top-20 left-0 right-0 z-50 px-3 sm:px-4 animate-slideDown" role="dialog" aria-modal="true" aria-label="Search">
             <div className="max-w-2xl mx-auto">
-              <div className="bg-card/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-border/50 p-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <Search className="h-6 w-6 text-primary" />
+              <div className="bg-card/95 backdrop-blur-2xl rounded-2xl sm:rounded-3xl shadow-2xl border border-border/50 p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <Search className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   <input
                     type="text"
                     placeholder={language === 'ar' ? 'ابحث عن وجبات...' : 'Search for meals...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground"
+                    className="flex-1 bg-transparent border-none outline-none text-base sm:text-lg text-foreground placeholder:text-muted-foreground"
                     autoFocus
                   />
-                  <button onClick={() => setSearchOpen(false)} className="p-2 hover:bg-muted rounded-full transition-colors" aria-label="Close search" title="Close">
-                    <X className="h-5 w-5" />
+                  <button onClick={() => setSearchOpen(false)} className="p-1.5 sm:p-2 hover:bg-muted rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="Close search" title="Close">
+                    <X className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
                 {searchQuery && (
-                  <div className="text-sm text-muted-foreground px-2">
+                  <div className="text-xs sm:text-sm text-muted-foreground px-2">
                     {filteredMeals.length} {filteredMeals.length === 1 ? 'result' : 'results'} found
                   </div>
                 )}
@@ -257,29 +322,31 @@ export default function MenuPage() {
       {/* Floating Action Button - Search */}
       <button
         onClick={() => setSearchOpen(true)}
-        className="fixed top-24 right-4 z-40 bg-gradient-to-br from-primary to-accent text-white p-3 sm:p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="fixed top-20 right-3 sm:right-4 z-40 bg-gradient-to-br from-primary to-accent text-white p-2.5 sm:p-3 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-label="Search meals" title="Search"
       >
-        <Search className="h-5 w-5" />
+        <Search className="h-4 w-4 sm:h-5 sm:w-5" />
       </button>
 
       {/* Fixed below nav */}
       <div>
-        {/* Category Tabs - Sticky (Mobile/Tablet) */}
-        <div className="sticky top-20 z-40 bg-background/70 backdrop-blur-2xl border-b border-border/40 lg:hidden">
+  {/* No promotional banner per user request */}
+      {/* Category Tabs - Sticky (Mobile/Tablet) */}
+  <div ref={categoryBarRef} className="sticky top-16 sm:top-20 z-[60] bg-background/70 backdrop-blur-2xl border-b border-border/40 lg:hidden">
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
           <div className="container mx-auto px-2 sm:px-4">
-            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto py-3 sm:py-4 scrollbar-hide snap-x" role="navigation" aria-label="Categories">
+            <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto py-2 sm:py-2.5 scrollbar-hide snap-x" role="navigation" aria-label="Categories">
               {categoriesData.map((category, idx) => {
                 const isActive = selectedCategory === category.id;
                 return (
                   <button
                     key={category.id || idx}
+                    data-category-id={category.id || ''}
                     onClick={() => handleSelectCategory(category.id || '')}
-                    className={`px-6 py-3 rounded-2xl whitespace-nowrap font-semibold transition-all duration-300 tracking-tight relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    className={`px-3 sm:px-4 py-2 sm:py-2 min-h-[40px] rounded-lg sm:rounded-xl whitespace-nowrap font-semibold transition-colors duration-300 tracking-tight relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-[11px] sm:text-xs flex-shrink-0 ${
                       isActive
-                        ? 'bg-gradient-to-br from-primary to-accent text-white shadow-lg scale-105'
-                        : 'bg-card/80 border border-border/50 text-foreground hover:bg-muted hover:scale-105 hover:shadow-md active:scale-95'
+                        ? 'bg-gradient-to-br from-primary to-accent text-white shadow-lg'
+                        : 'bg-card/80 border border-border/50 text-foreground hover:bg-muted hover:shadow-md active:scale-95'
                     }`}
                     aria-current={isActive ? 'true' : undefined}
                   >
@@ -287,7 +354,7 @@ export default function MenuPage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"></div>
                     )}
                     <span className="snap-center relative z-10">{getLocalizedName(category)}</span>
-                    <span className={`ml-2 inline-flex items-center justify-center text-xs px-3 py-1 rounded-full font-bold relative z-10 ${
+                    <span className={`ml-1.5 sm:ml-2 inline-flex items-center justify-center text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-0.5 rounded-full font-bold relative z-10 ${
                       isActive
                         ? 'bg-white/20 text-white backdrop-blur-sm'
                         : 'bg-muted text-muted-foreground'
@@ -303,7 +370,7 @@ export default function MenuPage() {
 
 
         {/* Mobile/Tablet content (single column) */}
-  <div className="container mx-auto px-2 sm:px-4 py-6 sm:py-8 lg:hidden">
+  <div className="container mx-auto px-2 sm:px-3 py-3 sm:py-4 lg:hidden">
           {categoriesData
             .filter((c) => (counts[c.id] || 0) > 0)
             .map((category, idx) => {
@@ -314,19 +381,19 @@ export default function MenuPage() {
                   key={cid || idx}
                   ref={(el) => { sectionRefs.current[cid] = el; }}
                   data-section-id={cid}
-                  className="mb-6"
+                  className="mb-3 sm:mb-4"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                    <h2 className="text-xl sm:text-2xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2.5 sm:mb-3">
+                    <h2 className="text-lg sm:text-xl font-bold text-foreground bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                       {getLocalizedName(category)}
                     </h2>
-                    <span className="text-sm font-bold text-muted-foreground bg-muted px-4 py-2 rounded-full">{list.length}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground bg-muted px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">{list.length}</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                     {list.map((meal, mIdx) => (
                       <div
                         key={meal._id || meal.id || mIdx}
-                        className="card-premium overflow-hidden cursor-pointer group rounded-2xl min-h-[220px] sm:min-h-[260px]"
+                        className="card-premium overflow-hidden cursor-pointer group"
                         onClick={() => {
                           setActiveMeal({
                             _id: meal._id,
@@ -414,19 +481,19 @@ export default function MenuPage() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-2 sm:p-3 flex flex-col h-full">
-                          <h3 className="font-semibold text-xs sm:text-sm text-[hsl(var(--foreground))] mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+                        <div className="p-2 sm:p-2.5 flex flex-col h-full">
+                          <h3 className="font-semibold text-[11px] sm:text-xs text-[hsl(var(--foreground))] mb-0.5 sm:mb-1 line-clamp-1 group-hover:text-primary transition-colors">
                             {getLocalizedName(meal)}
                           </h3>
                           {getLocalizedDescription(meal) && (
-                            <p className="text-[10px] sm:text-xs text-[hsl(var(--muted-foreground))] mb-2 line-clamp-2 leading-relaxed flex-1">
+                            <p className="text-[9px] sm:text-[10px] text-[hsl(var(--muted-foreground))] mb-1.5 sm:mb-2 line-clamp-1 sm:line-clamp-2 leading-tight sm:leading-relaxed flex-1">
                               {getLocalizedDescription(meal)}
                             </p>
                           )}
-                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-[hsl(var(--border))]/50">
-                            <span className="text-xs sm:text-base font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
+                          <div className="flex items-center justify-between mt-auto pt-1.5 sm:pt-2 border-t border-[hsl(var(--border))]/50">
+                            <span className="text-xs sm:text-sm font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                             <button
-                              className="bg-gradient-to-r from-primary to-accent text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium hover:from-primary/90 hover:to-accent/90 transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-h-[32px] sm:min-h-[36px]"
+                              className="bg-gradient-to-r from-primary to-accent text-white px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-medium hover:from-primary/90 hover:to-accent/90 transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-0.5 sm:gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 min-h-[28px] sm:min-h-[32px]"
                               title={language === 'ar' ? 'أضف إلى السلة' : 'Add to cart'}
                               aria-label={`Add ${getLocalizedName(meal)} to cart`}
                               onClick={(e) => {
@@ -443,8 +510,8 @@ export default function MenuPage() {
                                 setModalOpen(true);
                               }}
                             >
-                              <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                              {language === 'ar' ? 'أضف' : 'Add'}
+                              <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                              <span className="hidden xs:inline">{language === 'ar' ? 'أضف' : 'Add'}</span>
                             </button>
                           </div>
                         </div>
@@ -460,7 +527,7 @@ export default function MenuPage() {
   <div className="hidden lg:grid lg:grid-cols-12 gap-6 container mx-auto px-4 py-4">
           {/* Left: Categories list */}
           <aside className="lg:col-span-3 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {categoriesData.map((category, idx) => {
                 const cid = category.id || '';
                 const count = counts[cid] || 0;
@@ -469,8 +536,9 @@ export default function MenuPage() {
                 return (
                   <button
                     key={cid || idx}
+                    data-category-id={cid}
                     onClick={() => handleSelectCategory(cid)}
-                    className={`w-full text-left px-5 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden group tracking-tight ${
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 relative overflow-hidden group tracking-tight ${
                       active 
                         ? 'bg-primary text-primary-foreground scale-[1.02]' 
                         : 'bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] border border-[hsl(var(--border))]/50 hover:border-[hsl(var(--primary))]/30 hover:scale-[1.02] text-[hsl(var(--foreground))]'
@@ -481,8 +549,8 @@ export default function MenuPage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary-foreground/10 to-primary/0 animate-shimmer" />
                     )}
                     <div className="flex items-center justify-between relative">
-                      <span className={`line-clamp-1 ${active ? 'font-bold' : 'font-semibold'}`}>{getLocalizedName(category)}</span>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-bold transition-all ${
+                      <span className={`line-clamp-1 text-sm ${active ? 'font-bold' : 'font-semibold'}`}>{getLocalizedName(category)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold transition-all ${
                         active 
                           ? 'bg-primary-foreground/20 text-primary-foreground' 
                           : 'bg-[hsl(var(--muted))]/80 text-[hsl(var(--muted-foreground))] group-hover:bg-[hsl(var(--muted))]'
@@ -506,13 +574,13 @@ export default function MenuPage() {
                     key={cid || idx}
                     ref={(el) => { sectionRefs.current[cid] = el; }}
                     data-section-id={cid}
-                    className="mb-10"
+                    className="mb-6"
                   >
-                    <h2 className="text-2xl font-bold text-foreground mb-5 flex items-center tracking-tight">
+                    <h2 className="text-xl font-bold text-foreground mb-4 flex items-center tracking-tight">
                       {getLocalizedName(category)}
-                      <span className="ml-3 text-xs font-semibold text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full">{list.length}</span>
+                      <span className="ml-2.5 text-xs font-semibold text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full">{list.length}</span>
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                       {list.map((meal, mIdx) => (
                         <div
                           key={meal._id || meal.id || mIdx}
@@ -603,19 +671,19 @@ export default function MenuPage() {
                           </div>
 
                           {/* Content */}
-                          <div className="p-5 flex flex-col">
-                            <h3 className="font-bold text-lg text-foreground mb-1.5 line-clamp-1 group-hover:text-primary transition-colors">
+                          <div className="p-4 flex flex-col">
+                            <h3 className="font-bold text-base text-foreground mb-1 line-clamp-1 group-hover:text-primary transition-colors">
                               {getLocalizedName(meal)}
                             </h3>
                             {getLocalizedDescription(meal) && (
-                              <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed flex-1">
+                              <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2 leading-relaxed flex-1">
                                 {getLocalizedDescription(meal)}
                               </p>
                             )}
-                            <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
-                              <span className="text-xl font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
+                            <div className="flex items-center justify-between pt-2.5 border-t border-border/50 mt-auto">
+                              <span className="text-lg font-bold text-primary tabular-nums">{formatPrice(meal.price, language)}</span>
                               <button
-                                className="bg-gradient-to-r from-primary to-accent text-white px-4 py-2 rounded-full text-sm font-medium hover:from-primary/90 hover:to-accent/90 hover:shadow-md active:scale-95 transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                className="bg-gradient-to-r from-primary to-accent text-white px-3.5 py-1.5 rounded-full text-sm font-medium hover:from-primary/90 hover:to-accent/90 hover:shadow-md active:scale-95 transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                 title={language === 'ar' ? 'أضف إلى السلة' : 'Add to cart'}
                                 aria-label={`Add ${getLocalizedName(meal)} to cart`}
                                 onClick={(e) => {
@@ -648,7 +716,7 @@ export default function MenuPage() {
       </div>
       <MealCustomizeModal open={modalOpen} onOpenChange={setModalOpen} meal={activeMeal} />
       {/* Bottom sheet cart preview (mobile) */}
-      <BottomSheetCart />
+  {/* Removed BottomSheetCart to prevent persistent bottom bar on mobile */}
     </div>
   );
 }

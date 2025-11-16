@@ -26,7 +26,7 @@ export default function Home() {
             {/* Main Heading */}
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground animate-slideUp" style={{ animationDelay: '0.1s' }}>
               Savor Every{' '}
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                 Moment
               </span>
             </h1>
@@ -139,20 +139,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <style jsx global>{`
-        @keyframes gradient {
-          0%, 100% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-        }
-        .animate-gradient {
-          animation: gradient 3s ease infinite;
-        }
-      `}</style>
     </div>
   );
 }

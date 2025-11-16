@@ -611,3 +611,244 @@ html.reduce-motion *::after {
     font-size: 16px;
   }
 }
+
+/* ===== Enhanced Accessibility Features (WCAG 2.1 AA Compliance) ===== */
+
+/* Screen Reader Optimizations */
+html.screen-reader-optimized {
+  /* More verbose ARIA live regions */
+  --sr-verbosity: polite;
+}
+
+html.screen-reader-optimized [role="status"],
+html.screen-reader-optimized [role="alert"] {
+  position: relative;
+}
+
+/* Enhanced Keyboard Navigation */
+html.keyboard-navigation *:focus {
+  outline: 3px solid hsl(var(--primary)) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.1);
+}
+
+html.keyboard-navigation a:focus,
+html.keyboard-navigation button:focus {
+  background-color: hsl(var(--primary) / 0.05);
+}
+
+/* Enhanced Focus Indicators (WCAG 2.4.7) */
+html.enhanced-focus *:focus-visible {
+  outline: 4px solid hsl(var(--primary)) !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 6px hsl(var(--primary) / 0.15),
+              0 0 0 2px hsl(var(--card));
+  border-radius: 4px;
+}
+
+html.enhanced-focus button:focus-visible,
+html.enhanced-focus a:focus-visible {
+  transform: scale(1.02);
+  transition: transform 0.1s ease;
+}
+
+/* Readable Font (Dyslexia-Friendly) */
+html.readable-font,
+html.readable-font * {
+  font-family: 'Arial', 'Helvetica', sans-serif !important;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+html.readable-font h1,
+html.readable-font h2,
+html.readable-font h3,
+html.readable-font h4,
+html.readable-font h5,
+html.readable-font h6 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Enhanced Text Spacing (WCAG 1.4.12) */
+html.enhanced-spacing * {
+  line-height: 1.8 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+html.enhanced-spacing p {
+  margin-bottom: 2em !important;
+}
+
+html.enhanced-spacing h1,
+html.enhanced-spacing h2,
+html.enhanced-spacing h3,
+html.enhanced-spacing h4,
+html.enhanced-spacing h5,
+html.enhanced-spacing h6 {
+  margin-bottom: 1em !important;
+  margin-top: 1.5em !important;
+}
+
+/* Link Underlines (Always Visible) */
+html.underline-links a {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 3px !important;
+}
+
+html.underline-links a:hover {
+  text-decoration-thickness: 3px !important;
+  text-decoration-color: hsl(var(--primary)) !important;
+}
+
+html.underline-links a:focus {
+  text-decoration-thickness: 3px !important;
+  text-decoration-style: double !important;
+}
+
+/* Color Blind Friendly Mode Enhancements */
+html.color-blind {
+  /* Use patterns and shapes in addition to colors */
+  --success: 220 76% 40%;     /* Blue instead of green */
+  --warning: 38 92% 50%;      /* Keep orange */
+  --destructive: 0 84% 40%;   /* Darker red */
+  --info: 211 96% 48%;        /* Bright blue */
+}
+
+html.color-blind .bg-success,
+html.color-blind [class*="bg-green"] {
+  background-color: hsl(var(--success)) !important;
+}
+
+html.color-blind .text-success,
+html.color-blind [class*="text-green"] {
+  color: hsl(var(--success)) !important;
+}
+
+/* Add visual patterns for color-blind users */
+html.color-blind .badge-success::before,
+html.color-blind .alert-success::before {
+  content: "✓ ";
+  font-weight: bold;
+}
+
+html.color-blind .badge-error::before,
+html.color-blind .alert-error::before {
+  content: "✗ ";
+  font-weight: bold;
+}
+
+html.color-blind .badge-warning::before,
+html.color-blind .alert-warning::before {
+  content: "⚠ ";
+  font-weight: bold;
+}
+
+/* High Contrast Mode Enhancements */
+html.high-contrast {
+  --border: 0 0% 0%;
+  --input: 0 0% 0%;
+}
+
+html.high-contrast.dark {
+  --border: 0 0% 100%;
+  --input: 0 0% 100%;
+}
+
+html.high-contrast * {
+  border-width: 2px !important;
+}
+
+html.high-contrast img {
+  filter: contrast(1.2);
+}
+
+/* Skip Links Enhancement */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  font-weight: bold;
+  z-index: 9999;
+  border-radius: 0 0 0.5rem 0;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Ensure all fonts use font-display: swap for performance */
+* {
+  font-display: swap;
+}
+
+/* Prevent text from becoming invisible (WCAG 1.4.3) */
+::selection {
+  background-color: hsl(var(--primary) / 0.3);
+  color: hsl(var(--foreground));
+}
+
+/* Touch Target Size (WCAG 2.5.5 - Level AAA) */
+@media (pointer: coarse) {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px;
+  }
+}
+
+/* Ensure sufficient spacing between interactive elements */
+html.enhanced-spacing button + button,
+html.enhanced-spacing a + a {
+  margin-left: 1rem !important;
+}
+
+/* Print Styles (Accessibility for printed content) */
+@media print {
+  * {
+    background: white !important;
+    color: black !important;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+  
+  /* Hide bottom nav when printing */
+  nav[aria-label="Mobile bottom navigation"] {
+    display: none !important;
+  }
+}
+
+/* Mobile Bottom Navigation Spacing */
+@media (max-width: 768px) {
+  /* Add padding to body to account for bottom nav */
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Add safe area for bottom nav - prevents content from being hidden */
+  main,
+  .min-h-screen {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Safe area support for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

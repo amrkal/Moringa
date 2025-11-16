@@ -13,6 +13,13 @@ interface AccessibilitySettings {
   reducedMotion: boolean;
   theme: ThemeName;
   colorBlind: boolean;
+  // New WCAG 2.1 AA features
+  screenReaderOptimized: boolean;
+  keyboardNavigation: boolean;
+  focusIndicators: boolean;
+  readableFont: boolean;
+  textSpacing: boolean;
+  linkUnderlines: boolean;
 }
 
 interface AccessibilityContextValue extends AccessibilitySettings {
@@ -24,6 +31,12 @@ interface AccessibilityContextValue extends AccessibilitySettings {
   isDarkMode: boolean;
   setTheme: (theme: ThemeName) => void;
   setColorBlind: (enabled: boolean) => void;
+  setScreenReaderOptimized: (enabled: boolean) => void;
+  setKeyboardNavigation: (enabled: boolean) => void;
+  setFocusIndicators: (enabled: boolean) => void;
+  setReadableFont: (enabled: boolean) => void;
+  setTextSpacing: (enabled: boolean) => void;
+  setLinkUnderlines: (enabled: boolean) => void;
 }
 
 const defaultSettings: AccessibilitySettings = {
@@ -33,6 +46,12 @@ const defaultSettings: AccessibilitySettings = {
   reducedMotion: false,
   theme: 'moringa',
   colorBlind: false,
+  screenReaderOptimized: false,
+  keyboardNavigation: true,
+  focusIndicators: true,
+  readableFont: false,
+  textSpacing: false,
+  linkUnderlines: false,
 };
 
 const AccessibilityContext = createContext<AccessibilityContextValue | undefined>(undefined);
@@ -58,6 +77,12 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     if (mediaQuery.matches && !stored) {
       setSettings(prev => ({ ...prev, reducedMotion: true }));
     }
+
+    // Check system preference for high contrast
+    const contrastQuery = window.matchMedia('(prefers-contrast: more)');
+    if (contrastQuery.matches && !stored) {
+      setSettings(prev => ({ ...prev, highContrast: true }));
+    }
   }, []);
 
   // Persist settings to localStorage
@@ -65,15 +90,10 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     localStorage.setItem('accessibility-settings', JSON.stringify(settings));
   }, [settings]);
 
-  // Apply color mode (dark/light/system) with explicit classes
-  // Rules:
-  // - 'dark': add .dark, remove .light
-  // - 'light': add .light, remove .dark (prevents @media dark override)
-  // - 'system': remove both .dark and .light, let prefers-color-scheme drive it
+  // Apply color mode
   useEffect(() => {
     const root = document.documentElement;
 
-    // Determine dark state for consumers
     let shouldBeDark = false;
     if (settings.colorMode === 'dark') {
       shouldBeDark = true;
@@ -82,18 +102,15 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
     setIsDarkMode(shouldBeDark);
 
-    // Reset classes first
     root.classList.remove('dark', 'light');
-
     if (settings.colorMode === 'dark') {
       root.classList.add('dark');
     } else if (settings.colorMode === 'light') {
-      // Explicit light should suppress the @media dark block (:root:not(.light))
       root.classList.add('light');
     }
   }, [settings.colorMode]);
 
-  // Apply font size class
+  // Apply font size
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove('font-small', 'font-normal', 'font-large', 'font-extra-large');
@@ -110,7 +127,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
   }, [settings.highContrast]);
 
-  // Apply color theme class
+  // Apply theme
   useEffect(() => {
     const root = document.documentElement;
     const themes: ThemeName[] = ['moringa', 'emerald', 'rose', 'violet', 'sky', 'amber'];
@@ -128,7 +145,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
   }, [settings.reducedMotion]);
 
-  // Apply color blind friendly mode
+  // Apply color blind mode
   useEffect(() => {
     const root = document.documentElement;
     if (settings.colorBlind) {
@@ -138,33 +155,83 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     }
   }, [settings.colorBlind]);
 
-  const setColorMode = (mode: ColorMode) => {
-    setSettings(prev => ({ ...prev, colorMode: mode }));
-  };
+  // Apply screen reader optimizations
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.screenReaderOptimized) {
+      root.classList.add('screen-reader-optimized');
+      // Set aria-live regions to be more verbose
+      root.setAttribute('data-sr-verbose', 'true');
+    } else {
+      root.classList.remove('screen-reader-optimized');
+      root.removeAttribute('data-sr-verbose');
+    }
+  }, [settings.screenReaderOptimized]);
 
-  const setFontSize = (size: FontSize) => {
-    setSettings(prev => ({ ...prev, fontSize: size }));
-  };
+  // Apply keyboard navigation enhancements
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.keyboardNavigation) {
+      root.classList.add('keyboard-navigation');
+    } else {
+      root.classList.remove('keyboard-navigation');
+    }
+  }, [settings.keyboardNavigation]);
 
-  const setHighContrast = (enabled: boolean) => {
-    setSettings(prev => ({ ...prev, highContrast: enabled }));
-  };
+  // Apply focus indicators
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.focusIndicators) {
+      root.classList.add('enhanced-focus');
+    } else {
+      root.classList.remove('enhanced-focus');
+    }
+  }, [settings.focusIndicators]);
 
-  const setReducedMotion = (enabled: boolean) => {
-    setSettings(prev => ({ ...prev, reducedMotion: enabled }));
-  };
+  // Apply readable font (dyslexia-friendly)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.readableFont) {
+      root.classList.add('readable-font');
+    } else {
+      root.classList.remove('readable-font');
+    }
+  }, [settings.readableFont]);
 
-  const resetSettings = () => {
-    setSettings(defaultSettings);
-  };
+  // Apply enhanced text spacing (WCAG 1.4.12)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.textSpacing) {
+      root.classList.add('enhanced-spacing');
+    } else {
+      root.classList.remove('enhanced-spacing');
+    }
+  }, [settings.textSpacing]);
 
-  const setTheme = (theme: ThemeName) => {
-    setSettings(prev => ({ ...prev, theme }));
-  };
+  // Apply link underlines
+  useEffect(() => {
+    const root = document.documentElement;
+    if (settings.linkUnderlines) {
+      root.classList.add('underline-links');
+    } else {
+      root.classList.remove('underline-links');
+    }
+  }, [settings.linkUnderlines]);
 
-  const setColorBlind = (enabled: boolean) => {
-    setSettings(prev => ({ ...prev, colorBlind: enabled }));
-  };
+  const setColorMode = (mode: ColorMode) => setSettings(prev => ({ ...prev, colorMode: mode }));
+  const setFontSize = (size: FontSize) => setSettings(prev => ({ ...prev, fontSize: size }));
+  const setHighContrast = (enabled: boolean) => setSettings(prev => ({ ...prev, highContrast: enabled }));
+  const setReducedMotion = (enabled: boolean) => setSettings(prev => ({ ...prev, reducedMotion: enabled }));
+  const setTheme = (theme: ThemeName) => setSettings(prev => ({ ...prev, theme }));
+  const setColorBlind = (enabled: boolean) => setSettings(prev => ({ ...prev, colorBlind: enabled }));
+  const setScreenReaderOptimized = (enabled: boolean) => setSettings(prev => ({ ...prev, screenReaderOptimized: enabled }));
+  const setKeyboardNavigation = (enabled: boolean) => setSettings(prev => ({ ...prev, keyboardNavigation: enabled }));
+  const setFocusIndicators = (enabled: boolean) => setSettings(prev => ({ ...prev, focusIndicators: enabled }));
+  const setReadableFont = (enabled: boolean) => setSettings(prev => ({ ...prev, readableFont: enabled }));
+  const setTextSpacing = (enabled: boolean) => setSettings(prev => ({ ...prev, textSpacing: enabled }));
+  const setLinkUnderlines = (enabled: boolean) => setSettings(prev => ({ ...prev, linkUnderlines: enabled }));
+  
+  const resetSettings = () => setSettings(defaultSettings);
 
   const value: AccessibilityContextValue = {
     ...settings,
@@ -176,6 +243,12 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     isDarkMode,
     setTheme,
     setColorBlind,
+    setScreenReaderOptimized,
+    setKeyboardNavigation,
+    setFocusIndicators,
+    setReadableFont,
+    setTextSpacing,
+    setLinkUnderlines,
   };
 
   return (

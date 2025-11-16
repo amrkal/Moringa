@@ -255,7 +255,7 @@ export default function MealCustomizeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background via-background to-muted/20 border-2 border-border/50 shadow-2xl">
         {!meal ? (
           <div className="flex items-center justify-center p-8">
             <div className="text-center">
@@ -264,51 +264,67 @@ export default function MealCustomizeModal({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Header with optional small image for edit mode */}
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">
-                    {getName(meal, language)}
-                  </DialogTitle>
-                  {getDesc(meal, language) && (
-                    <DialogDescription>{getDesc(meal, language)}</DialogDescription>
-                  )}
-                </DialogHeader>
-              </div>
-              
-              {/* Small image in edit mode */}
-              {mode === 'edit' && meal.image_url && (
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                  <MealImage
-                    src={meal.image_url}
-                    alt={getName(meal, language)}
-                    priority
-                  />
-                </div>
-              )}
-            </div>
-
+          <div className="space-y-6">
             {/* Smaller image in add mode */}
             {mode === 'add' && meal.image_url && (
-              <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
+              <div className="relative w-full h-48 sm:h-56 rounded-2xl overflow-hidden bg-gradient-to-br from-muted to-accent/10 shadow-lg">
                 <MealImage
                   src={meal.image_url}
                   alt={getName(meal, language)}
                   priority
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <DialogTitle className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
+                    {getName(meal, language)}
+                  </DialogTitle>
+                  {getDesc(meal, language) && (
+                    <DialogDescription className="text-white/90 mt-2 drop-shadow">
+                      {getDesc(meal, language)}
+                    </DialogDescription>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Header for edit mode */}
+            {mode === 'edit' && (
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      {getName(meal, language)}
+                    </DialogTitle>
+                    {getDesc(meal, language) && (
+                      <DialogDescription className="text-base mt-2">{getDesc(meal, language)}</DialogDescription>
+                    )}
+                  </DialogHeader>
+                </div>
+                
+                {/* Small image in edit mode */}
+                {meal.image_url && (
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0 ring-2 ring-primary/20 shadow-lg">
+                    <MealImage
+                      src={meal.image_url}
+                      alt={getName(meal, language)}
+                      priority
+                    />
+                  </div>
+                )}
               </div>
             )}
 
             {/* Ingredients Section */}
             {(defaults.length > 0 || optionals.length > 0) ? (
-              <>
+              <div className="space-y-5">
                 {/* Included by default */}
                 {defaults.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-foreground">
-                      {getTranslation('common', 'includedByDefault', language)}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1 w-1 rounded-full bg-primary"></div>
+                      <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">
+                        {getTranslation('common', 'includedByDefault', language)}
+                      </h3>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {defaults.map((mi) => {
@@ -334,13 +350,13 @@ export default function MealCustomizeModal({
                             key={`def-${mi.ingredient_id}`}
                             type="button"
                             onClick={() => toggleDefault(mi.ingredient_id)}
-                            className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                            className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all hover:scale-105 active:scale-95 ${
                               removed
-                                ? 'bg-destructive-soft text-destructive border-[hsl(var(--destructive))/0.3]'
-                                : 'bg-muted text-foreground border-border'
+                                ? 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-900 shadow-sm'
+                                : 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-900'
                             }`}
                           >
-                            {removed ? 'Remove' : 'Included'} • {label}
+                            {removed ? '− Remove' : '✓ Included'} • {label}
                           </button>
                         );
                       })}
@@ -350,11 +366,14 @@ export default function MealCustomizeModal({
 
                 {/* Extras */}
                 {optionals.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-foreground">
-                      {getTranslation('common', 'addExtras', language)}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1 w-1 rounded-full bg-accent"></div>
+                      <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">
+                        {getTranslation('common', 'addExtras', language)}
+                      </h3>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {optionals.map((mi) => {
                         // Try multiple ID formats
                         let ing = ingredientById.get(mi.ingredient_id);
@@ -377,17 +396,26 @@ export default function MealCustomizeModal({
                         return (
                           <label
                             key={`opt-${mi.ingredient_id}`}
-                            className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition ${
-                              selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                            className={`flex items-center justify-between rounded-xl border-2 p-4 cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+                              selected 
+                                ? 'border-primary bg-primary/10 shadow-md' 
+                                : 'border-border bg-card hover:border-primary/50 hover:shadow-sm'
                             }`}
                           >
-                            <div>
-                              <div className="font-medium text-foreground">{label}</div>
-                              <div className="text-sm text-muted-foreground">+ {formatPrice(price, language)}</div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-foreground text-sm">{label}</div>
+                              <div className="text-sm font-bold text-primary">+ {formatPrice(price, language)}</div>
+                            </div>
+                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                              selected 
+                                ? 'border-primary bg-primary' 
+                                : 'border-border bg-background'
+                            }`}>
+                              {selected && <span className="text-primary-foreground text-sm">✓</span>}
                             </div>
                             <input
                               type="checkbox"
-                              className="h-4 w-4"
+                              className="sr-only"
                               checked={selected}
                               onChange={() => toggleExtra(mi.ingredient_id)}
                             />
@@ -397,36 +425,44 @@ export default function MealCustomizeModal({
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              <div className="bg-muted rounded-lg p-4 text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="bg-gradient-to-br from-muted to-accent/10 rounded-xl p-6 text-center border-2 border-dashed border-border">
+                <p className="text-sm text-muted-foreground font-medium">
                   This meal has no customizable ingredients. Adjust quantity below.
                 </p>
               </div>
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="w-9 h-9 rounded-full bg-muted text-foreground hover:bg-muted/80 transition"
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                >
-                  -
-                </button>
-                <div className="min-w-[2ch] text-center font-semibold text-foreground">{quantity}</div>
-                <button
-                  type="button"
-                  className="w-9 h-9 rounded-full bg-muted text-foreground hover:bg-muted/80 transition"
-                  onClick={() => setQuantity((q) => q + 1)}
-                >
-                  +
-                </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t-2 border-border/50">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-muted-foreground">Quantity:</span>
+                <div className="flex items-center gap-3 bg-muted/50 rounded-xl p-1.5 border-2 border-border">
+                  <button
+                    type="button"
+                    className="w-10 h-10 rounded-lg bg-card hover:bg-destructive/10 hover:text-destructive text-foreground font-bold transition-all hover:scale-110 active:scale-95 border border-border"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  >
+                    −
+                  </button>
+                  <div className="min-w-[3ch] text-center font-bold text-lg text-foreground tabular-nums">{quantity}</div>
+                  <button
+                    type="button"
+                    className="w-10 h-10 rounded-lg bg-card hover:bg-primary/10 hover:text-primary text-foreground font-bold transition-all hover:scale-110 active:scale-95 border border-border"
+                    onClick={() => setQuantity((q) => q + 1)}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
-              <Button disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onConfirm}>
+              <Button 
+                disabled={loading} 
+                size="lg"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all font-bold text-base px-8 py-6" 
+                onClick={onConfirm}
+              >
                 {mode === 'edit' ? getTranslation('common', 'save', language) || 'Save' : getTranslation('common', 'addToCart', language)} • {formatPrice(computedPrice, language)}
               </Button>
             </div>

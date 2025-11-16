@@ -26,6 +26,19 @@ async def connect_to_mongo():
         # Initialize Beanie with the models
         from .models import User, Category, Meal, Ingredient, Order, Coupon, Review, Notification, RestaurantSettings
         
+        # Drop old non-sparse email index if it exists
+        try:
+            users_collection = database.database.users
+            indexes = await users_collection.list_indexes().to_list(length=100)
+            for idx in indexes:
+                # Drop the non-sparse email_1 index
+                if idx.get('name') == 'email_1' and not idx.get('sparse', False):
+                    await users_collection.drop_index('email_1')
+                    print("🔧 Dropped old non-sparse email index")
+        except Exception as e:
+            # Index might not exist, that's fine
+            pass
+        
         await init_beanie(
             database=database.database,
             document_models=[

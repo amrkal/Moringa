@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCartStore } from "@/store/cart";
 import Link from "next/link";
-import { X, Minus, Plus, ShoppingCart } from "lucide-react";
+import { X, Minus, Plus, ShoppingCart, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function useLockBody(open: boolean) {
   useEffect(() => {
@@ -36,24 +37,29 @@ export default function BottomSheetCart() {
     return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  // Hide trigger if empty
-  if (count <= 0) return null;
+  // Hide trigger if empty - show empty state in drawer instead
+  const isEmpty = count <= 0;
 
   return (
     <>
-      {/* Trigger bar */}
+      {/* Trigger bar - always show on mobile */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-3 md:hidden">
         <button
           onClick={() => setOpen(true)}
-          aria-label={`View cart with ${count} ${count === 1 ? 'item' : 'items'}, total $${total.toFixed(2)}`}
-          className="w-full flex items-center justify-between bg-gradient-to-r from-orange-500 to-orange-400 text-white px-5 py-3 rounded-full shadow-lg active:scale-[0.99] transition-transform"
+          aria-label={isEmpty ? 'View empty cart' : `View cart with ${count} ${count === 1 ? 'item' : 'items'}, total $${total.toFixed(2)}`}
+          className="w-full flex items-center justify-between bg-gradient-to-r from-primary to-accent text-white px-5 py-3.5 rounded-full shadow-lg active:scale-[0.98] transition-all hover:shadow-xl"
         >
-          <div className="flex items-center gap-2 font-semibold">
+          <div className="flex items-center gap-2.5 font-semibold">
             <ShoppingCart className="w-5 h-5 text-white" />
-            <span>{count} {count === 1 ? "item" : "items"}</span>
+            <span>{isEmpty ? 'Cart' : `${count} ${count === 1 ? "item" : "items"}`}</span>
           </div>
-          <div className="font-bold">${'{'}total.toFixed(2){'}'}</div>
-          <div className="text-sm font-bold">View</div>
+          {!isEmpty && (
+            <>
+              <div className="font-bold tabular-nums">${total.toFixed(2)}</div>
+              <div className="text-sm font-bold">View</div>
+            </>
+          )}
+          {isEmpty && <div className="text-sm font-medium opacity-80">Empty</div>}
         </button>
       </div>
 
@@ -87,67 +93,118 @@ export default function BottomSheetCart() {
               </button>
             </div>
 
-            {/* Items */}
-            <div className="max-h-[50vh] overflow-auto px-4 pb-4" role="list" aria-label="Cart items">
-              {items.map((it) => (
-                <div key={it.id} className="flex items-center gap-3 py-3 border-b border-border/60" role="listitem">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{it.meal.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {it.selectedIngredients?.map((i) => i.name).join(", ") || "No extras"}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2" role="group" aria-label="Quantity controls">
-                    <button
-                      onClick={() => updateQuantity(it.id, it.quantity - 1)}
-                      className="p-2 rounded-md bg-muted hover:bg-muted/80"
-                      aria-label={`Decrease quantity of ${it.meal.name}`}
-                    >
-                      <Minus className="w-4 h-4" aria-hidden="true" />
-                    </button>
-                    <div className="w-8 text-center font-semibold" aria-label={`Quantity: ${it.quantity}`}>
-                      {it.quantity}
-                    </div>
-                    <button
-                      onClick={() => updateQuantity(it.id, it.quantity + 1)}
-                      className="p-2 rounded-md bg-muted hover:bg-muted/80"
-                      aria-label={`Increase quantity of ${it.meal.name}`}
-                    >
-                      <Plus className="w-4 h-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                  <div className="w-20 text-right tabular-nums font-semibold" aria-label={`Price: $${it.totalPrice.toFixed(2)}`}>
-                    ${'{'}it.totalPrice.toFixed(2){'}'}
-                  </div>
-                  <button
-                    onClick={() => removeItem(it.id)}
-                    className="ml-2 text-muted-foreground hover:text-foreground"
-                    aria-label={`Remove ${it.meal.name} from cart`}
-                  >
-                    <X className="w-4 h-4" aria-hidden="true" />
-                  </button>
+            {/* Items or Empty State */}
+            {isEmpty ? (
+              <div className="px-4 py-12 text-center">
+                <div className="mx-auto w-24 h-24 mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                  <ShoppingBag className="w-12 h-12 text-muted-foreground/50" />
                 </div>
-              ))}
-            </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Your cart is empty</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Add some delicious meals to get started!
+                </p>
+                <Button variant="solid" onClick={() => setOpen(false)} className="mx-auto">
+                  Browse Menu
+                </Button>
+              </div>
+            ) : (
+              <div className="max-h-[50vh] overflow-auto px-4 pb-4" role="list" aria-label="Cart items">
+                {items.map((it) => (
+                  <div key={it.id} className="flex flex-col gap-2 py-3 border-b border-border/60 last:border-0" role="listitem">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground">{it.meal.name}</div>
+                        
+                        {/* Show added ingredients */}
+                        {it.selectedIngredients && it.selectedIngredients.length > 0 && (
+                          <div className="text-xs text-success mt-1">
+                            + {it.selectedIngredients.map((i) => i.name).join(", ")}
+                          </div>
+                        )}
+                        
+                        {/* Show removed ingredients */}
+                        {it.removedIngredients && it.removedIngredients.length > 0 && (
+                          <div className="text-xs text-destructive mt-0.5">
+                            - {it.removedIngredients.map((ri: any) => typeof ri === 'string' ? ri : ri.name).join(", ")}
+                          </div>
+                        )}
+                        
+                        {/* Show special instructions */}
+                        {it.specialInstructions && (
+                          <div className="text-xs text-muted-foreground mt-0.5 italic">
+                            Note: {it.specialInstructions}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="w-20 text-right">
+                        <div className="text-sm font-semibold text-foreground tabular-nums">${it.totalPrice.toFixed(2)}</div>
+                      </div>
+                      
+                      <button
+                        onClick={() => removeItem(it.id)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                        aria-label={`Remove ${it.meal.name} from cart`}
+                      >
+                        <X className="w-4 h-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5" role="group" aria-label="Quantity controls">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(it.id, it.quantity - 1)}
+                        aria-label={`Decrease quantity of ${it.meal.name}`}
+                        className="h-8 w-8 rounded-md"
+                      >
+                        <Minus className="w-3.5 h-3.5" aria-hidden="true" />
+                      </Button>
+                      <div className="w-8 text-center font-semibold text-sm tabular-nums" aria-label={`Quantity: ${it.quantity}`}>
+                        {it.quantity}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(it.id, it.quantity + 1)}
+                        aria-label={`Increase quantity of ${it.meal.name}`}
+                        className="h-8 w-8 rounded-md"
+                      >
+                        <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* Footer */}
-            <div className="p-4 border-t border-border bg-card rounded-t-3xl">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-muted-foreground">Subtotal</div>
-                <div className="text-xl font-bold tabular-nums">${'{'}total.toFixed(2){'}'}</div>
+            {/* Footer with totals - only show if not empty */}
+            {!isEmpty && (
+              <div className="p-4 border-t-2 border-border bg-card">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+                  <div className="text-sm text-muted-foreground font-medium">Subtotal</div>
+                  <div className="text-2xl font-bold tabular-nums text-foreground">${total.toFixed(2)}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setOpen(false)}
+                    className="h-11"
+                  >
+                    Keep browsing
+                  </Button>
+                  <Button
+                    variant="solid"
+                    asChild
+                    className="h-11"
+                  >
+                    <Link href="/cart" onClick={() => setOpen(false)}>
+                      View cart
+                    </Link>
+                  </Button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setOpen(false)}
-                  className="px-4 py-3 rounded-xl border border-border font-medium hover:bg-muted"
-                >
-                  Continue browsing
-                </button>
-                <Link href="/cart" onClick={() => setOpen(false)} className="px-4 py-3 rounded-xl bg-primary text-primary-foreground text-center font-semibold hover:bg-primary/90">
-                  View cart
-                </Link>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}

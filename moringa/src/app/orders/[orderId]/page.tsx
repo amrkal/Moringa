@@ -143,7 +143,7 @@ export default function CustomerOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -153,7 +153,7 @@ export default function CustomerOrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Order not found</p>
         </div>
@@ -165,9 +165,9 @@ export default function CustomerOrderDetailPage() {
   const currentStep = getCurrentStepIndex();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-10">
+      <div className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-sm bg-card/95">
         <div className="container mx-auto px-4 py-4">
           <button
             onClick={() => router.push('/orders')}
@@ -181,7 +181,7 @@ export default function CustomerOrderDetailPage() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Order Status Card */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6 mb-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Order #{order.order_number}</h1>
@@ -200,7 +200,7 @@ export default function CustomerOrderDetailPage() {
           {/* Progress Tracker */}
           {order.status !== 'CANCELLED' && (
             <div className="relative">
-              <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 dark:bg-neutral-800" />
+              <div className="absolute top-5 left-0 right-0 h-1 bg-muted" />
               <div
                 className="absolute top-5 left-0 h-1 bg-primary transition-all duration-500"
                 style={{ width: `${(currentStep / (statusSteps.length - 1)) * 100}%` }}
@@ -214,11 +214,11 @@ export default function CustomerOrderDetailPage() {
                   return (
                     <div key={step.key} className="flex flex-col items-center">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border-2 ${
                           isComplete
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-gray-200 dark:bg-neutral-800 text-muted-foreground'
-                        } ${isCurrent ? 'ring-4 ring-primary/20' : ''}`}
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                            : 'bg-muted text-muted-foreground border-border'
+                        } ${isCurrent ? 'ring-4 ring-primary/20 scale-110' : ''}`}
                       >
                         <StepIcon size={18} />
                       </div>
@@ -254,7 +254,7 @@ export default function CustomerOrderDetailPage() {
         </div>
 
         {/* Order Items */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6 mb-6">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6 mb-6">
           <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
           <div className="space-y-6">
             {order.items.map((item, idx) => (
@@ -367,7 +367,8 @@ export default function CustomerOrderDetailPage() {
         )}
 
         {/* Order Info */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-800 p-6">
+                {/* Order Summary */}
+        <div className="bg-card rounded-xl shadow-sm border border-border p-6">
           <h2 className="text-xl font-bold text-foreground mb-4">Order Information</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>

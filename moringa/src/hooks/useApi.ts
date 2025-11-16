@@ -91,7 +91,7 @@ export function useMeals(active_only = false) {
   return useQuery<MealWithLegacyProps[]>({
     queryKey: [...queryKeys.menu.meals(), { active_only }],
     queryFn: async () => {
-      const response = await api.get('/meals/', { params: { active_only } });
+      const response = await api.get('/meals', { params: { active_only } });
       const rawData = extractArray(response.data);
       const normalized = rawData.map(normalizeMeal).filter((m: MealWithLegacyProps) => !active_only || m.isActive);
       return normalized;
@@ -123,7 +123,7 @@ export function useCategories(active_only = false) {
   return useQuery<Category[]>({
     queryKey: [...queryKeys.menu.categories(), { active_only }],
     queryFn: async () => {
-      const response = await api.get('/categories/', { params: { active_only } });
+      const response = await api.get('/categories', { params: { active_only } });
       const rawData = extractArray(response.data);
       const normalized = rawData.map(normalizeCategory).filter((c: Category) => !active_only || c.isActive);
       return normalized;
@@ -312,7 +312,7 @@ export function useOrders(filters?: Record<string, unknown>) {
   return useQuery({
     queryKey: queryKeys.orders.list(filters),
     queryFn: async () => {
-      const response = await api.get('/orders', { params: filters });
+      const response = await api.get('/orders/', { params: filters });
       return response.data;
     },
     staleTime: 30 * 1000, // Orders are more dynamic, refresh more frequently

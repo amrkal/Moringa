@@ -15,17 +15,8 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    // Trailing slash logic: always add trailing slash for FastAPI endpoints (except those with query params or file extensions)
-    if (config.url && !config.url.includes('?') && !config.url.endsWith('/')) {
-      // Don't add slash if URL ends with a file extension or looks like an ObjectId
-      const lastSegment = config.url.split('/').pop() || '';
-      const hasExtension = /\.[a-z0-9]+$/i.test(lastSegment);
-      const looksLikeObjectId = /^[a-fA-F0-9]{24}$/.test(lastSegment);
-      
-      if (!hasExtension && !looksLikeObjectId) {
-        config.url = config.url + '/';
-      }
-    }
+    // No trailing slash logic - backend routes expect NO trailing slashes
+    // (FastAPI router with empty string pattern: @router.get("") expects /api/v1/settings NOT /api/v1/settings/)
     
     // Prefer admin token but fall back to customer token so both flows work
     const adminToken = localStorage.getItem('token');
@@ -119,7 +110,7 @@ export interface PaginatedResponse<T> {
 // Auth API
 export const authApi = {
   login: (phone: string, password: string) =>
-    api.post('/auth/login/', { phone, password }),
+    api.post('/auth/login', { phone, password }),
   
   register: (userData: {
     name: string;
@@ -128,25 +119,25 @@ export const authApi = {
     password: string;
     role?: 'CUSTOMER' | 'ADMIN';
   }) =>
-    api.post('/auth/register/', userData),
+    api.post('/auth/register', userData),
   
   sendOTP: (phone: string, method: 'sms' | 'whatsapp' = 'sms') =>
-    api.post('/auth/verify-phone/', { phone, method: method.toUpperCase() }),
+    api.post('/auth/verify-phone', { phone, method: method.toUpperCase() }),
   
   verifyOTP: (phone: string, otpCode: string) =>
-    api.post('/auth/confirm-phone/', { phone, code: otpCode }),
+    api.post('/auth/confirm-phone', { phone, code: otpCode }),
   
   verifyPhone: (phone: string, code: string) =>
-    api.post('/auth/verify-phone/', { phone, code }),
+    api.post('/auth/verify-phone', { phone, code }),
   
   getCurrentUser: () =>
-    api.get('/auth/me/'),
+    api.get('/auth/me'),
 };
 
 // Categories API
 export const categoriesApi = {
   getAll: (params?: { skip?: number; limit?: number; active_only?: boolean }) =>
-    api.get('/categories/', { params }),
+    api.get('/categories', { params }),
   
   getById: (id: string) =>
     api.get(`/categories/${id}`),
@@ -185,7 +176,7 @@ export const mealsApi = {
     category_id?: string;
     search?: string;
   }) =>
-    api.get('/meals/', { params }),
+    api.get('/meals', { params }),
   
   getById: (id: string) =>
     api.get(`/meals/${id}`),
@@ -241,7 +232,7 @@ export const mealsApi = {
 // Ingredients API
 export const ingredientsApi = {
   getAll: (params?: { skip?: number; limit?: number; active_only?: boolean }) =>
-    api.get('/ingredients/', { params }),
+    api.get('/ingredients', { params }),
   
   getById: (id: string) =>
     api.get(`/ingredients/${id}`),
@@ -303,7 +294,7 @@ export const ordersApi = {
       special_instructions?: string;
     }>;
   }) =>
-  api.post('/orders/', orderData),
+  api.post('/orders', orderData),
   
   update: (id: string, orderData: Partial<{
     status: string;
@@ -311,19 +302,19 @@ export const ordersApi = {
     delivery_address: string;
     special_instructions: string;
   }>) =>
-    api.put(`/orders/${id}/`, orderData),
+    api.put(`/orders/${id}`, orderData),
   
   getStats: () =>
-    api.get('/orders/stats/'),
+    api.get('/orders/stats'),
 };
 
 // Users API
 export const usersApi = {
   getAll: (params?: { skip?: number; limit?: number; role?: string }) =>
-    api.get('/users/', { params }),
+    api.get('/users', { params }),
   
   getById: (id: string) =>
-    api.get(`/users/${id}/`),
+    api.get(`/users/${id}`),
   
   update: (id: string, userData: Partial<{
     name: string;

@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Allow access from devices on local network
+  allowedDevOrigins: ['192.168.0.0/16'],
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },

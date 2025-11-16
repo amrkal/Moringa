@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import Link from 'next/link';
 import { 
@@ -45,6 +45,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTranslation } from '@/lib/translations';
 import { formatCurrency } from '@/lib/format';
 import { getLocalizedText } from '@/lib/i18n';
+import { useQuery } from '@tanstack/react-query';
+import { TopMeals } from '@/components/admin/TopMeals';
+import { WidgetOverlay } from '@/components/admin/WidgetOverlay';
 
 interface DashboardStats {
   totalOrders: number;
@@ -93,19 +96,78 @@ export default function AdminDashboard() {
     ordersByStatus: [],
   });
   const [loading, setLoading] = useState(true);
-  const [timePeriod, setTimePeriod] = useState<string>('30'); // Time period filter in days (supports custom)
+  // Supported presets: '1', '30', '90', 'all'
+  const [timePeriod, setTimePeriod] = useState<string>('30');
   const [customDays, setCustomDays] = useState<string>('');
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   useEffect(() => {
     fetchDashboardData();
-    fetchAnalyticsData();
+  }, []);
+
+  // Build params based on preset; when 'all' omit days to let backend return full range
+  const analyticsParams = useMemo(() => {
+    return timePeriod === 'all'
+      ? { days: undefined as number | undefined }
+      : { days: Number(timePeriod) || 30 };
   }, [timePeriod]);
 
-  const fetchAnalyticsData = async () => {
-    try {
-      const token = localStorage.getItem('token');
+  const summaryQuery = useQuery({
+    queryKey: ['analytics:summary', analyticsParams],
+    queryFn: async () => {
+      const params = analyticsParams.days ? { params: { days: analyticsParams.days } } : undefined;
+      const res = await api.get('/analytics/summary', params);
+      return res.data;
+    },
+    staleTime: 0,
+  });
+
+  const paymentsQuery = useQuery({
+    queryKey: ['analytics:payments', analyticsParams],
+    queryFn: async () => {
+      const params = analyticsParams.days ? { params: { days: analyticsParams.days } } : undefined;
+      const res = await api.get('/analytics/payments/summary', params);
+      return res.data;
+    },
+    staleTime: 0,
+  });
+
+  const analyticsQuery = useQuery({
+    queryKey: ['reports:analytics', analyticsParams],
+    queryFn: async () => {
+      const params = analyticsParams.days ? { params: { days: analyticsParams.days } } : undefined;
+      // When 'all', the daily endpoint defaults to 30 days; instead, use monthly for a broad trend
+      if (!analyticsParams.days) {
+        const [overviewRes, monthlyRes, popularRes, byTypeRes, byStatusRes, peakHoursRes] = await Promise.all([
+    api.get('/analytics/sales/overview'), // still used for legacy cards
+    api.get('/analytics/sales/monthly', { params: { months: 12 } }),
+    api.get('/analytics/meals/popular', { params: { limit: 50, delivered_only: true } }),
+          api.get('/analytics/orders/by-type'),
+          api.get('/analytics/orders/by-status', params),
+          api.get('/analytics/orders/peak-hours', { params: { days: 30 } }),
+        ]);
+
+        const monthly = Array.isArray(monthlyRes.data) ? monthlyRes.data : monthlyRes.data?.data || [];
+        // Map monthly to chart-friendly daily-like points using first day of month
+        const monthlyAsDaily = monthly.map((m: any) => ({
+          date: m.month ? `${m.month}-01` : m.month_start || m.month_name,
+          orders: m.orders,
+          revenue: m.revenue,
+        }));
+
+        const combinedAll: AnalyticsData = {
+          salesOverview: overviewRes.data,
+          dailySales: monthlyAsDaily,
+          popularMeals: Array.isArray(popularRes.data) ? popularRes.data : popularRes.data?.data || [],
+          peakHours: Array.isArray(peakHoursRes.data) ? peakHoursRes.data : peakHoursRes.data?.data || [],
+          ordersByType: Array.isArray(byTypeRes.data) ? byTypeRes.data : byTypeRes.data?.data || [],
+          ordersByStatus: Array.isArray(byStatusRes.data) ? byStatusRes.data : byStatusRes.data?.data || [],
+        };
+        setAnalytics(combinedAll);
+        return combinedAll;
+      }
+
       const [
         salesOverviewRes,
         dailySalesRes,
@@ -114,38 +176,59 @@ export default function AdminDashboard() {
         ordersByTypeRes,
         ordersByStatusRes,
       ] = await Promise.all([
-        api.get('/analytics/sales/overview', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get(`/analytics/sales/daily?days=${timePeriod}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get('/analytics/meals/popular/?limit=10', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get(`/analytics/orders/peak-hours?days=${timePeriod}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get('/analytics/orders/by-type/', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        api.get('/analytics/orders/by-status/', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        api.get('/analytics/sales/overview'),
+        api.get('/analytics/sales/daily', params),
+  api.get('/analytics/meals/popular', { params: { limit: 50, delivered_only: true, ...(analyticsParams.days ? { days: analyticsParams.days } : {}) } }),
+        api.get('/analytics/orders/peak-hours', params),
+        api.get('/analytics/orders/by-type', params),
+  api.get('/analytics/orders/by-status', params),
       ]);
 
-      setAnalytics({
+      // All these endpoints return raw lists (no data wrapper) except overview
+      const combined: AnalyticsData = {
         salesOverview: salesOverviewRes.data,
-        dailySales: dailySalesRes.data.data || [],
-        popularMeals: popularMealsRes.data.data || [],
-        peakHours: peakHoursRes.data.data || [],
-        ordersByType: ordersByTypeRes.data.data || [],
-        ordersByStatus: ordersByStatusRes.data.data || [],
-      });
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
+        dailySales: Array.isArray(dailySalesRes.data) ? dailySalesRes.data : dailySalesRes.data?.data || [],
+        popularMeals: Array.isArray(popularMealsRes.data) ? popularMealsRes.data : popularMealsRes.data?.data || [],
+        peakHours: Array.isArray(peakHoursRes.data) ? peakHoursRes.data : peakHoursRes.data?.data || [],
+        ordersByType: Array.isArray(ordersByTypeRes.data) ? ordersByTypeRes.data : ordersByTypeRes.data?.data || [],
+        ordersByStatus: Array.isArray(ordersByStatusRes.data) ? ordersByStatusRes.data : ordersByStatusRes.data?.data || [],
+      };
+      setAnalytics(combined);
+      return combined;
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+
+  // Derived summary metrics for current range
+  const rangeSummary = useMemo(() => {
+    const s = summaryQuery.data;
+    if (!s) return { revenue: 0, orders: 0, aov: 0, soldMeals: 0, failures: 0, refunds: 0 };
+    return {
+      revenue: s.revenue_delivered,
+      orders: s.orders_total,
+      aov: s.aov_delivered,
+      soldMeals: s.sold_meals_delivered,
+      failures: s.payment_failures,
+      refunds: s.refunds,
+    };
+  }, [summaryQuery.data]);
+
+  // Align stat cards with analytics overview totals for consistency and to avoid pagination caps
+  useEffect(() => {
+    const ov: any = (analytics as any).salesOverview;
+    if (ov) {
+      setStats((prev) => ({
+        ...prev,
+        totalOrders: ov.total_orders ?? prev.totalOrders,
+        totalRevenue: ov.total_revenue ?? prev.totalRevenue,
+        todayOrders: ov.today_orders ?? prev.todayOrders,
+        todayRevenue: ov.today_revenue ?? prev.todayRevenue,
+        avgOrderValue: ov.avg_order_value ?? prev.avgOrderValue,
+      }));
     }
-  };
+  }, [analytics]);
 
   const exportToCSV = () => {
     const csvContent = [
@@ -323,7 +406,7 @@ export default function AdminDashboard() {
       // Fetch all data in parallel
       const [ordersRes, usersRes, mealsRes] = await Promise.all([
         api.get('/orders/'),
-        api.get('/users/'),
+        api.get('/users'),
         api.get('/meals/?active_only=false')
       ]);
 
@@ -472,6 +555,8 @@ export default function AdminDashboard() {
     );
   }
 
+  const isFetchingAnalytics = analyticsQuery.isFetching || summaryQuery.isFetching || paymentsQuery.isFetching;
+
   const statCards = [
     {
       title: getTranslation('admin', 'totalOrders', language),
@@ -527,10 +612,10 @@ export default function AdminDashboard() {
             {/* Time Period Filter */}
             <div className="flex items-center gap-2 bg-muted/50 p-1.5 rounded-xl border border-border">
               {[
-                { value: '1', label: '1 Day' },
-                { value: '7', label: '7 Days' },
-                { value: '30', label: '30 Days' },
-                { value: '90', label: '90 Days' },
+                { value: '1', label: '1D' },
+                { value: '30', label: '30D' },
+                { value: '90', label: '90D' },
+                { value: 'all', label: 'All' },
               ].map((period) => (
                 <button
                   key={period.value}
@@ -571,6 +656,43 @@ export default function AdminDashboard() {
           </div>
           {/* Gradient accent line */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+        </div>
+
+        {/* Range Summary Metrics */}
+        <div className="relative">
+          <WidgetOverlay active={isFetchingAnalytics} />
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[{
+              label: 'Sold Meals',
+              value: rangeSummary.soldMeals.toLocaleString(),
+              tooltip: 'Total items in delivered orders for the selected period',
+            },{
+              label: 'Orders',
+              value: rangeSummary.orders.toLocaleString(),
+              tooltip: 'All orders created in the selected period (all statuses)',
+            },{
+              label: 'Revenue (Delivered)',
+              value: formatCurrency(rangeSummary.revenue, language, 'ILS'),
+              tooltip: 'Sum of delivered orders in period',
+            },{
+              label: 'AOV',
+              value: formatCurrency(rangeSummary.aov, language, 'ILS'),
+              tooltip: 'Delivered revenue / delivered orders',
+            },{
+              label: 'Payment Failures',
+              value: rangeSummary.failures.toLocaleString(),
+              tooltip: 'Orders with payment_status = FAILED within period',
+            },{
+              label: 'Refunds',
+              value: rangeSummary.refunds.toLocaleString(),
+              tooltip: 'Orders with payment_status = REFUNDED within period',
+            }].map((m) => (
+              <div key={m.label} className="card-premium p-4">
+                <p className="text-xs text-muted-foreground mb-1" title={m.tooltip || ''}>{m.label}</p>
+                <p className="text-xl font-semibold">{m.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Export Reports Section */}
@@ -694,9 +816,12 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-foreground tracking-tight">Daily Sales Trend</h3>
-                <p className="text-xs text-muted-foreground mt-1">Last {timePeriod} {timePeriod === '1' ? 'day' : 'days'} performance</p>
+                <p className="text-xs text-muted-foreground mt-1">{timePeriod === 'all' ? 'All-time performance (monthly trend)' : `Last ${timePeriod} ${timePeriod === '1' ? 'day' : 'days'} performance`}</p>
               </div>
             </div>
+            {analytics.dailySales.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">No data for selected period</div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={analytics.dailySales}>
                 <defs>
@@ -737,6 +862,7 @@ export default function AdminDashboard() {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Recent Orders */}
@@ -960,6 +1086,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+  {/* Top Meals (Delivered Only) */}
+  <TopMeals range={analyticsParams} limit={5} />
+
         {/* Quick Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-900 p-6">
@@ -1024,8 +1153,11 @@ export default function AdminDashboard() {
           <div className="card-premium p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Peak Order Hours</h3>
-              <p className="text-sm text-muted-foreground mt-1">Order distribution by hour (last {timePeriod} {timePeriod === '1' ? 'day' : 'days'})</p>
+              <p className="text-sm text-muted-foreground mt-1">Order distribution by hour ({timePeriod === 'all' ? 'all time' : `last ${timePeriod} ${timePeriod === '1' ? 'day' : 'days'}`})</p>
             </div>
+            {analytics.peakHours.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">No data for selected period</div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics.peakHours}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -1053,6 +1185,7 @@ export default function AdminDashboard() {
                 <Bar dataKey="count" fill="#3b82f6" name="Orders" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Order Types Distribution */}
@@ -1061,6 +1194,9 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Types</h3>
               <p className="text-sm text-muted-foreground mt-1">Distribution by delivery type</p>
             </div>
+            {analytics.ordersByType.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">No data for selected period</div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -1068,7 +1204,11 @@ export default function AdminDashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ type, percentage }: any) => `${type}: ${percentage}%`}
+                  label={({ type, count }: any) => {
+                    const total = analytics.ordersByType.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
+                    const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+                    return `${type}: ${pct}%`;
+                  }}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="count"
@@ -1088,6 +1228,7 @@ export default function AdminDashboard() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Popular Meals Chart */}
@@ -1096,6 +1237,9 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Top 10 Popular Meals</h3>
               <p className="text-sm text-muted-foreground mt-1">By order count</p>
             </div>
+            {analytics.popularMeals.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">No data for selected period</div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics.popularMeals} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -1121,6 +1265,7 @@ export default function AdminDashboard() {
                 <Bar dataKey="order_count" fill="#10b981" name="Orders" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
 
           {/* Order Status Distribution */}
@@ -1129,6 +1274,9 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-foreground tracking-tight">Order Status</h3>
               <p className="text-sm text-muted-foreground mt-1">Current order distribution</p>
             </div>
+            {analytics.ordersByStatus.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-sm text-muted-foreground">No data for selected period</div>
+            ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -1136,7 +1284,11 @@ export default function AdminDashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ status, percentage }: any) => `${status}: ${percentage}%`}
+                  label={({ status, count }: any) => {
+                    const total = analytics.ordersByStatus.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
+                    const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+                    return `${status}: ${pct}%`;
+                  }}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="count"
@@ -1156,6 +1308,7 @@ export default function AdminDashboard() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

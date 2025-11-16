@@ -41,7 +41,7 @@ class PaymentStatus(str, PyEnum):
 # MongoDB Documents
 class User(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
-    email: Optional[EmailStr] = Field(None, unique=True)
+    email: Optional[EmailStr] = None
     phone: str = Field(..., unique=True)
     name: str
     role: UserRole = UserRole.CUSTOMER
@@ -65,7 +65,6 @@ class User(Document):
         name = "users"
         indexes = [
             IndexModel([("phone", ASCENDING)], unique=True),
-            IndexModel([("email", ASCENDING)], unique=True, sparse=True),
             IndexModel([("created_at", DESCENDING)]),
         ]
 

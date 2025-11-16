@@ -177,6 +177,13 @@ export function NotificationListener() {
             if (enabled) {
               const audio = new Audio('/notification.mp3');
               audio.volume = 0.5;
+              audio.onerror = () => {
+                // Silently handle missing audio file - only log once
+                if (!sessionStorage.getItem('audioWarningShown')) {
+                  console.warn('Notification sound file not found. Please add notification.mp3 to the public folder.');
+                  sessionStorage.setItem('audioWarningShown', 'true');
+                }
+              };
               audio.play().catch(() => {});
             }
           } catch {}
@@ -214,7 +221,7 @@ export function NotificationListener() {
       setIsPolling(true);
       try {
         // Fetch recent orders (backend returns array or {data: []})
-  const res = await api.get('/orders/');
+  const res = await api.get('/orders');
         const raw = res.data?.data || res.data || [];
         const list: any[] = Array.isArray(raw) ? raw : [];
 
