@@ -1,0 +1,98 @@
+[
+  {
+    "_id": "82f473ec-d7cb-483a-a6c6-4b7d3858eb30",
+    "name": {
+      "en": "Sandwiches",
+      "ar": "كريكات",
+      "he": "כריכים"
+    },
+    "description": {
+      "en": "Fresh healthy sandwiches",
+      "ar": "كريكات طازجة وصحية",
+      "he": "כריכים טריים ובריאים"
+    },
+    "image": "https://images.unsplash.com/photo-1509722747041-616f39b57569",
+    "order": 0,
+    "is_active": true
+  },
+  {
+    "_id": "a619dcb2-7f51-4d3e-9c47-5a1183b9b1c8",
+    "name": {
+      "en": "Breakfast",
+      "ar": "إفطار",
+      "he": "ארוחת בוקר"
+    },
+    "description": {
+      "en": "Nutritious breakfasts",
+      "ar": "وجبات إفطار مغذية",
+      "he": "ארוחות בוקר מזינות"
+    },
+    "image": "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666",
+    "order": 1,
+    "is_active": true
+  },
+  {
+    "_id": "75ff270b-a59f-4a54-95e3-9196c719ebf7",
+    "name": {
+      "en": "Hot Drinks",
+      "ar": "مشروبات ساخنة",
+      "he": "שתיה חמה"
+    },
+    "description": {
+      "en": "Quality coffee and tea",
+      "ar": "قهوة وشاي عالي الجودة",
+      "he": "קפה ותה איכותי"
+    },
+    "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
+    "order": 2,
+    "is_active": true
+  },
+  {
+    "_id": "0ab8e5e9-8a37-49f7-ac84-5379642a9ae2",
+    "name": {
+      "en": "Fresh Juice",
+      "ar": "عصائر طبيعية",
+      "he": "מיץ טבעי"
+    },
+    "description": {
+      "en": "Fresh pressed natural juices",
+      "ar": "عصائر طبيعية طازجة",
+      "he": "מיצים טבעיים סחוטים"
+    },
+    "image": "https://images.unsplash.com/photo-1600271886742-f049cd451bba",
+    "order": 3,
+    "is_active": true
+  },
+  {
+    "_id": "d635197f-b779-400f-8e4d-864de3c3e90b",
+    "name": {
+      "en": "Main Courses",
+      "ar": "أطباق رئيسية",
+      "he": "עיקריות"
+    },
+    "description": {
+      "en": "Nutritious main dishes",
+      "ar": "أطباق رئيسية مغذية",
+      "he": "מנות עיקריות מזינות"
+    },
+    "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
+    "order": 4,
+    "is_active": true
+  },
+  {
+    "_id": "23dec4fc-7a35-4d29-bfcb-eced14294865",
+    "name": {
+      "en": "Salads",
+      "ar": "سلطات",
+      "he": "סלטים"
+    },
+    "description": {
+      "en": "Fresh healthy salads",
+      "ar": "سلطات طازجة وصحية",
+      "he": "סלטים טריים ובריאים"
+    },
+    "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
+    "order": 5,
+    "is_active": true
+  }
+]

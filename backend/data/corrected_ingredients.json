@@ -1,0 +1,690 @@
+[
+  {
+    "_id": "6b3c1bcc-823d-4e91-aeaf-9926b6689f25",
+    "name": {
+      "en": "Avocado",
+      "ar": "أفوكادو",
+      "he": "אבוקדו"
+    },
+    "description": {
+      "en": "Fresh avocado",
+      "ar": "أفوكادو طازج",
+      "he": "אבוקדו טרי"
+    },
+    "price": 5.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "7e6d477e-cf3c-41c5-81cc-181b54cbb298",
+    "name": {
+      "en": "Tuna",
+      "ar": "تونة",
+      "he": "טונה"
+    },
+    "description": {
+      "en": "Premium tuna",
+      "ar": "تونة فاخرة",
+      "he": "טונה איכותית"
+    },
+    "price": 5.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "4dc08412-3b0d-45a0-8b40-cc1125fb3668",
+    "name": {
+      "en": "Hard Boiled Egg",
+      "ar": "بيضة مسلوقة",
+      "he": "ביצה קשה"
+    },
+    "description": {
+      "en": "Hard boiled egg",
+      "ar": "بيضة مسلوقة",
+      "he": "ביצה קשה"
+    },
+    "price": 5.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "cde134dd-4f1e-4526-bda3-6ccced66c0d5",
+    "name": {
+      "en": "Grilled Chicken Breast",
+      "ar": "صدر دجاج مشوي",
+      "he": "חזה עוף אפוי"
+    },
+    "description": {
+      "en": "Grilled chicken breast",
+      "ar": "صدر دجاج مشوي",
+      "he": "חזה עוף אפוי"
+    },
+    "price": 20.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "e34739e2-41fa-4e7f-85c7-a19b7de6a2f2",
+    "name": {
+      "en": "Baked Schnitzel",
+      "ar": "شنيتسل مشوي",
+      "he": "שניצל אפוי"
+    },
+    "description": {
+      "en": "Baked schnitzel",
+      "ar": "شنيتسل مشوي",
+      "he": "שניצל אפוי"
+    },
+    "price": 20.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "ba452339-8822-4598-8f7e-f155fe78dfd2",
+    "name": {
+      "en": "Baked Salmon",
+      "ar": "سلمون مشوي",
+      "he": "סלמון אפוי"
+    },
+    "description": {
+      "en": "Baked salmon",
+      "ar": "سلمون مشوي",
+      "he": "סלמון אפוי"
+    },
+    "price": 25.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "c0e40a67-5b2b-4990-aeb3-f81f27b0d246",
+    "name": {
+      "en": "Lettuce",
+      "ar": "خس",
+      "he": "חסה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "8c5114b0-0a85-410e-a56f-d106da9b8ef1",
+    "name": {
+      "en": "Tomatoes",
+      "ar": "طماطم",
+      "he": "עגבניות"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "f1cb1f99-a159-4551-8f20-6b20a74e47a3",
+    "name": {
+      "en": "Cucumber",
+      "ar": "خيار",
+      "he": "מלפפון"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "8fb41a94-8445-48ea-9565-dc54c66119b1",
+    "name": {
+      "en": "Onion",
+      "ar": "بصل",
+      "he": "בצל"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "6d85b598-d431-4104-a6e1-ec1a5d9e84b5",
+    "name": {
+      "en": "Roasted Peppers",
+      "ar": "فلفل مشوي",
+      "he": "פלפלים קלויים"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "2c925bb0-549c-4dcd-a4a5-a324a8c7cb5e",
+    "name": {
+      "en": "Sweet Potato",
+      "ar": "بطاطا حلوة",
+      "he": "בטטה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "49271dd6-a4ac-40fa-81e6-4d9f4cbf6efa",
+    "name": {
+      "en": "Eggplant Spread",
+      "ar": "معجون باذنجان",
+      "he": "ממרח חציל"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "c8ba82e6-7d3c-472a-89a5-108d3dd5772e",
+    "name": {
+      "en": "Pesto Spread",
+      "ar": "صلصة بيستو",
+      "he": "ממרח פסטו"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "0d36dcc4-ee72-40bb-9e8c-4447bfa2b599",
+    "name": {
+      "en": "Tahini",
+      "ar": "طحينة",
+      "he": "טחינה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "44df2f72-d660-4f28-bab6-8e3c73d119e7",
+    "name": {
+      "en": "Quinoa",
+      "ar": "كينوا",
+      "he": "קינואה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "6a6fd6e8-b2b9-41fc-8968-9dc9980ab03d",
+    "name": {
+      "en": "Freekeh",
+      "ar": "فريكة",
+      "he": "פריקה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "2ae679de-b3ca-4b54-ac59-d3f1bddff072",
+    "name": {
+      "en": "Halloumi Cheese",
+      "ar": "جبنة حلومي",
+      "he": "גבינת חלומי"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "8fcc04fc-dacf-4c58-b48a-9c80799baf9d",
+    "name": {
+      "en": "Artichoke",
+      "ar": "أرضي شوكي",
+      "he": "ארטישוק"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "da437a45-ab40-48da-bcfa-151961167363",
+    "name": {
+      "en": "Beet",
+      "ar": "شمندر",
+      "he": "סלק"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-chard-001",
+    "name": {
+      "en": "Chard",
+      "ar": "سلق",
+      "he": "טרד"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-cherry-tomatoes-001",
+    "name": {
+      "en": "Cherry Tomatoes",
+      "ar": "طماطم كرزية",
+      "he": "שירי צבעים"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-white-cabbage-001",
+    "name": {
+      "en": "White Cabbage",
+      "ar": "كرنب أبيض",
+      "he": "כרוב לבן"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-red-cabbage-001",
+    "name": {
+      "en": "Red Cabbage",
+      "ar": "كرنب أحمر",
+      "he": "כרוב אדום"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-carrot-001",
+    "name": {
+      "en": "Carrot",
+      "ar": "جزر",
+      "he": "גזר"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-broccoli-001",
+    "name": {
+      "en": "Broccoli",
+      "ar": "بروكلي",
+      "he": "ברוקלי"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-green-onion-001",
+    "name": {
+      "en": "Green Onion",
+      "ar": "بصل أخضر",
+      "he": "בצל ירוק"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-red-onion-001",
+    "name": {
+      "en": "Red Onion",
+      "ar": "بصل أحمر",
+      "he": "בצל אדום"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-mint-001",
+    "name": {
+      "en": "Mint",
+      "ar": "نعناع",
+      "he": "נענע"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-corn-001",
+    "name": {
+      "en": "Corn",
+      "ar": "ذرة",
+      "he": "גמבה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-mushrooms-001",
+    "name": {
+      "en": "Mushrooms",
+      "ar": "فطر",
+      "he": "פטריות"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-parsley-001",
+    "name": {
+      "en": "Parsley",
+      "ar": "بقدونس",
+      "he": "פטרוזליה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-pickles-001",
+    "name": {
+      "en": "Pickles",
+      "ar": "مخلل",
+      "he": "מלפפון חמוץ"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-red-beans-001",
+    "name": {
+      "en": "Red Beans",
+      "ar": "فاصوليا حمراء",
+      "he": "שעועית אדומה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-chickpeas-001",
+    "name": {
+      "en": "Chickpeas",
+      "ar": "حمص",
+      "he": "חומוס גרגרים"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-spaghetti-001",
+    "name": {
+      "en": "Spaghetti",
+      "ar": "سباغيتي",
+      "he": "ספגטי"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-parmesan-001",
+    "name": {
+      "en": "Parmesan Cheese",
+      "ar": "جبنة بارميزان",
+      "he": "גבינת פרמיז'ן"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-sundried-tomatoes-001",
+    "name": {
+      "en": "Sun-dried Tomatoes",
+      "ar": "طماطم مجففة",
+      "he": "עגבניות מיובשות"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-basil-001",
+    "name": {
+      "en": "Basil",
+      "ar": "ريحان",
+      "he": "בזיליקום"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-roasted-eggplant-001",
+    "name": {
+      "en": "Roasted Eggplant",
+      "ar": "باذنجان مشوي",
+      "he": "חציל קלוי"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-omelette-001",
+    "name": {
+      "en": "Omelette",
+      "ar": "عجة",
+      "he": "חביתה"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-rice-001",
+    "name": {
+      "en": "Rice",
+      "ar": "أرز",
+      "he": "אורז"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  },
+  {
+    "_id": "NEW-vegetables-001",
+    "name": {
+      "en": "Vegetables",
+      "ar": "خضروات",
+      "he": "ירקות"
+    },
+    "description": {
+      "en": "",
+      "ar": "",
+      "he": ""
+    },
+    "price": 0.0,
+    "image": null,
+    "is_active": true
+  }
+]
