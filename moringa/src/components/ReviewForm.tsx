@@ -95,7 +95,7 @@ export default function ReviewForm({
         comment: comment.trim(),
       };
 
-      const response = await api.post('/reviews/', reviewData);
+      const response = await api.post('/reviews', reviewData);
       const reviewId = response.data.id;
 
       // Upload photos if any

@@ -405,9 +405,9 @@ export default function AdminDashboard() {
       
       // Fetch all data in parallel
       const [ordersRes, usersRes, mealsRes] = await Promise.all([
-        api.get('/orders/'),
+        api.get('/orders'),
         api.get('/users'),
-        api.get('/meals/?active_only=false')
+        api.get('/meals', { params: { active_only: false } })
       ]);
 
       console.log('Dashboard API Responses:', { ordersRes: ordersRes.data, usersRes: usersRes.data, mealsRes: mealsRes.data });

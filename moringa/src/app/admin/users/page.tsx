@@ -59,10 +59,10 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
-  await api.put(`/users/${editingUser.id}/`, formData);
+  await api.put(`/users/${editingUser.id}`, formData);
         toast.success(getTranslation('admin', 'userUpdated', language), { id: loadingToast });
       } else {
-  await api.post('/users/', formData);
+  await api.post('/users', formData);
         toast.success(getTranslation('admin', 'userCreated', language), { id: loadingToast });
       }
 
