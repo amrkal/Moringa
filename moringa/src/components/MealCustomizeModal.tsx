@@ -28,8 +28,7 @@ type Ingredient = {
 
 export type MealIngredient = {
   ingredient_id: string;
-  is_optional?: boolean;
-  is_default?: boolean;
+  ingredient_type: string;  // "required" | "removable" | "extra"
   extra_price?: number;
 };
 
@@ -146,21 +145,20 @@ export default function MealCustomizeModal({
     return map;
   }, [allIngredients]);
 
-  const defaults = useMemo(() => {
-    return (
-      meal?.ingredients?.filter((mi) => mi.is_default) || []
-    );
+  // Split ingredients by type
+  const removableIngredients = useMemo(() => {
+    return meal?.ingredients?.filter((mi) => mi.ingredient_type === 'removable') || [];
   }, [meal]);
 
-  const optionals = useMemo(() => {
-    return (
-      meal?.ingredients?.filter((mi) => !mi.is_default) || []
-    );
+  const extraIngredients = useMemo(() => {
+    return meal?.ingredients?.filter((mi) => mi.ingredient_type === 'extra') || [];
   }, [meal]);
+
+  // Note: "required" ingredients are hidden from customers
 
   const extrasTotal = useMemo(() => {
     let total = 0;
-    optionals.forEach((mi) => {
+    extraIngredients.forEach((mi) => {
       const id = mi.ingredient_id;
       if (selectedExtras[id]) {
         // Get price from the ingredient object
@@ -173,7 +171,7 @@ export default function MealCustomizeModal({
       }
     });
     return total;
-  }, [optionals, selectedExtras, ingredientById]);
+  }, [extraIngredients, selectedExtras, ingredientById]);
 
   const computedPrice = useMemo(() => {
     const base = meal?.price || 0;
@@ -192,7 +190,7 @@ export default function MealCustomizeModal({
     if (!meal) return;
     setLoading(true);
     try {
-      const selected = optionals
+      const selected = extraIngredients
         .filter((mi) => selectedExtras[mi.ingredient_id])
         .map((mi) => {
           let ing = ingredientById.get(mi.ingredient_id);
@@ -207,8 +205,8 @@ export default function MealCustomizeModal({
           };
         });
 
-      // Get list of removed default ingredients
-  const removedDefaultIngredients = defaults
+      // Get list of removed removable ingredients
+      const removedDefaultIngredients = removableIngredients
         .filter((mi) => removedDefaults[mi.ingredient_id])
         .map((mi) => {
           let ing = ingredientById.get(mi.ingredient_id);
@@ -315,10 +313,10 @@ export default function MealCustomizeModal({
             )}
 
             {/* Ingredients Section */}
-            {(defaults.length > 0 || optionals.length > 0) ? (
+            {(removableIngredients.length > 0 || extraIngredients.length > 0) ? (
               <div className="space-y-5">
-                {/* Included by default */}
-                {defaults.length > 0 && (
+                {/* Included by default - Removable ingredients */}
+                {removableIngredients.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="h-1 w-1 rounded-full bg-primary"></div>
@@ -327,7 +325,7 @@ export default function MealCustomizeModal({
                       </h3>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {defaults.map((mi) => {
+                      {removableIngredients.map((mi) => {
                         // Try multiple ID formats
                         let ing = ingredientById.get(mi.ingredient_id);
                         if (!ing) {
@@ -347,7 +345,7 @@ export default function MealCustomizeModal({
                         const removed = removedDefaults[mi.ingredient_id];
                         return (
                           <button
-                            key={`def-${mi.ingredient_id}`}
+                            key={`removable-${mi.ingredient_id}`}
                             type="button"
                             onClick={() => toggleDefault(mi.ingredient_id)}
                             className={`px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all hover:scale-105 active:scale-95 ${
@@ -364,8 +362,8 @@ export default function MealCustomizeModal({
                   </div>
                 )}
 
-                {/* Extras */}
-                {optionals.length > 0 && (
+                {/* Extras - ingredients with extra price */}
+                {extraIngredients.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="h-1 w-1 rounded-full bg-accent"></div>
@@ -374,7 +372,7 @@ export default function MealCustomizeModal({
                       </h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {optionals.map((mi) => {
+                      {extraIngredients.map((mi) => {
                         // Try multiple ID formats
                         let ing = ingredientById.get(mi.ingredient_id);
                         if (!ing) {
@@ -395,7 +393,7 @@ export default function MealCustomizeModal({
                         const selected = selectedExtras[mi.ingredient_id] || false;
                         return (
                           <label
-                            key={`opt-${mi.ingredient_id}`}
+                            key={`extra-${mi.ingredient_id}`}
                             className={`flex items-center justify-between rounded-xl border-2 p-4 cursor-pointer transition-all hover:scale-105 active:scale-95 ${
                               selected 
                                 ? 'border-primary bg-primary/10 shadow-md' 
