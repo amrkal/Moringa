@@ -99,7 +99,7 @@ export default function MealsPage() {
 
   const fetchMeals = async () => {
     try {
-      const response = await api.get('/meals/?active_only=false');
+      const response = await api.get('/meals', { params: { active_only: false } });
       setMeals(response.data);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedFetchMeals', language));
@@ -111,7 +111,7 @@ export default function MealsPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/categories/?active_only=false');
+      const response = await api.get('/categories', { params: { active_only: false } });
       setCategories(response.data);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedFetchCategories', language));
@@ -121,7 +121,7 @@ export default function MealsPage() {
 
   const fetchIngredients = async () => {
     try {
-      const response = await api.get('/ingredients/?active_only=true');
+      const response = await api.get('/ingredients', { params: { active_only: true } });
       setAllIngredients(response.data);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedFetchIngredients', language));

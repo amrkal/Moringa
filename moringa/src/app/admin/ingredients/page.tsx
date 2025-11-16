@@ -54,7 +54,7 @@ export default function IngredientsPage() {
 
   const fetchIngredients = async () => {
     try {
-      const response = await api.get('/ingredients/?active_only=false');
+      const response = await api.get('/ingredients', { params: { active_only: false } });
       setIngredients(response.data);
     } catch (error) {
       toast.error(getTranslation('admin', 'failedFetchIngredients', language));
