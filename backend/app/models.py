@@ -103,9 +103,12 @@ class Ingredient(Document):
 
 class MealIngredient(BaseModel):
     ingredient_id: str
-    is_optional: bool = True
-    is_default: bool = False
-    extra_price: float = 0.0
+    # Ingredient type determines how it appears to customers:
+    # - "required": Part of the meal, cannot be removed, not shown to customer
+    # - "removable": Included by default, customer can remove (free)
+    # - "extra": Not included, customer can add for extra_price
+    ingredient_type: str = "removable"  # "required" | "removable" | "extra"
+    extra_price: float = 0.0  # Only used when ingredient_type is "extra"
 
 class Meal(Document):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")

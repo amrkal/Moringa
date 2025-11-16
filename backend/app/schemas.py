@@ -91,8 +91,7 @@ class Ingredient(IngredientBase):
 # Meal Ingredient schemas
 class MealIngredientBase(BaseModel):
     ingredient_id: str
-    is_optional: bool = False
-    is_default: bool = False
+    ingredient_type: str = "removable"  # "required" | "removable" | "extra"
     extra_price: float = 0.0
 
 class MealIngredientCreate(MealIngredientBase):

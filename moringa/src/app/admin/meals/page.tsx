@@ -18,8 +18,8 @@ interface Category {
 
 interface MealIngredientLink {
   ingredient_id: string;
-  is_optional: boolean;
-  is_default: boolean;
+  ingredient_type: string; // "required" | "removable" | "extra"
+  extra_price?: number;
 }
 
 interface Meal {
@@ -86,8 +86,11 @@ export default function MealsPage() {
     is_vegan: false,
     is_gluten_free: false
   });
-  // selection per ingredient: mode (none|default|extra), removable applies only to default
-  const [ingredientSelection, setIngredientSelection] = useState<Record<string, { mode: 'none'|'default'|'extra'; removable: boolean }>>({});
+  // Ingredient selection: type determines how ingredient appears to customers
+  // "required" = part of meal, cannot be removed, not shown to customer
+  // "removable" = included by default, customer can remove (free)
+  // "extra" = not included, customer can add for extra price
+  const [ingredientSelection, setIngredientSelection] = useState<Record<string, string>>({});  // ingredientId -> "required" | "removable" | "extra" | "none"
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
@@ -135,11 +138,11 @@ export default function MealsPage() {
 
     // Build ingredients array from selection state
     const ingredients = Object.entries(ingredientSelection)
-      .filter(([_, config]) => config.mode !== 'none')
-      .map(([ingredientId, config]) => ({
+      .filter(([_, type]) => type !== 'none')
+      .map(([ingredientId, type]) => ({
         ingredient_id: ingredientId,
-        is_default: config.mode === 'default',
-        is_optional: config.mode === 'default' ? config.removable : true
+        ingredient_type: type,  // "required" | "removable" | "extra"
+        extra_price: 0  // Could add UI for this later
       }));
 
     // Map name and description to objects as required by backend
@@ -240,13 +243,10 @@ export default function MealsPage() {
         is_vegan: meal.is_vegan ?? false,
         is_gluten_free: meal.is_gluten_free ?? false
       });
-      // Load existing ingredient config
-      const selection: Record<string, { mode: 'none'|'default'|'extra'; removable: boolean }> = {};
+      // Load existing ingredient configuration
+      const selection: Record<string, string> = {};
       (meal.ingredients || []).forEach(link => {
-        selection[link.ingredient_id] = {
-          mode: link.is_default ? 'default' : 'extra',
-          removable: link.is_optional
-        };
+        selection[link.ingredient_id] = link.ingredient_type || 'removable';
       });
       setIngredientSelection(selection);
     } else {
@@ -337,25 +337,20 @@ export default function MealsPage() {
     }
   };
 
-  const toggleIngredientMode = (ingredientId: string) => {
+  const toggleIngredientType = (ingredientId: string) => {
     setIngredientSelection(prev => {
-      const current = prev[ingredientId];
-      if (!current || current.mode === 'none') {
-        return { ...prev, [ingredientId]: { mode: 'default', removable: false } };
-      } else if (current.mode === 'default') {
-        return { ...prev, [ingredientId]: { mode: 'extra', removable: true } };
+      const current = prev[ingredientId] || 'none';
+      // Cycle through: none → required → removable → extra → none
+      if (current === 'none') {
+        return { ...prev, [ingredientId]: 'required' };
+      } else if (current === 'required') {
+        return { ...prev, [ingredientId]: 'removable' };
+      } else if (current === 'removable') {
+        return { ...prev, [ingredientId]: 'extra' };
       } else {
         const { [ingredientId]: _, ...rest } = prev;
         return rest;
       }
-    });
-  };
-
-  const toggleRemovable = (ingredientId: string) => {
-    setIngredientSelection(prev => {
-      const current = prev[ingredientId];
-      if (!current || current.mode !== 'default') return prev;
-      return { ...prev, [ingredientId]: { ...current, removable: !current.removable } };
     });
   };
 
@@ -818,7 +813,7 @@ export default function MealsPage() {
 
                 <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
                   {filteredIngredients.map((ingredient) => {
-                    const config = ingredientSelection[ingredient.id] || { mode: 'none', removable: false };
+                    const ingredientType = ingredientSelection[ingredient.id] || 'none';
                     return (
                       <div
                         key={ingredient.id}
@@ -833,33 +828,22 @@ export default function MealsPage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => toggleIngredientMode(ingredient.id)}
+                            onClick={() => toggleIngredientType(ingredient.id)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 transition-all hover:scale-105 ${
-                              config.mode === 'none'
+                              ingredientType === 'none'
                                 ? 'border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                : config.mode === 'default'
+                                : ingredientType === 'required'
+                                ? 'border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20'
+                                : ingredientType === 'removable'
                                 ? 'border-primary/30 bg-primary/20 text-primary hover:bg-primary/30'
                                 : 'border-purple-500/30 bg-purple-500/10 text-purple-600 hover:bg-purple-500/20'
                             }`}
                           >
-                            {config.mode === 'none' && getTranslation('admin', 'notIncluded', language)}
-                            {config.mode === 'default' && getTranslation('common', 'includedByDefault', language)}
-                            {config.mode === 'extra' && getTranslation('admin', 'availableAsExtra', language)}
+                            {ingredientType === 'none' && getTranslation('admin', 'notIncluded', language)}
+                            {ingredientType === 'required' && '🔒 Required (Hidden)'}
+                            {ingredientType === 'removable' && '✓ Included (Removable)'}
+                            {ingredientType === 'extra' && getTranslation('admin', 'availableAsExtra', language)}
                           </button>
-                          {config.mode === 'default' && (
-                            <button
-                              type="button"
-                              onClick={() => toggleRemovable(ingredient.id)}
-                              className={`px-2.5 py-1.5 text-xs font-medium rounded-lg border-2 transition-all hover:scale-105 ${
-                                config.removable
-                                  ? 'border-orange-500/30 bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'
-                                  : 'border-gray-400/30 bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                              title={config.removable ? getTranslation('admin', 'userCanRemove', language) : getTranslation('admin', 'requiredCannotRemove', language)}
-                            >
-                              {config.removable ? `✓ ${getTranslation('admin', 'removable', language)}` : `🔒 ${getTranslation('admin', 'required', language)}`}
-                            </button>
-                          )}
                         </div>
                       </div>
                     );
