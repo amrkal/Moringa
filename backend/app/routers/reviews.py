@@ -75,7 +75,7 @@ async def save_review_photo(file: UploadFile) -> str:
     # Return relative URL
     return f"/uploads/reviews/{unique_filename}"
 
-@router.post("/", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
 async def create_review(
     review_data: ReviewCreate,
     current_user: User = Depends(get_current_user)

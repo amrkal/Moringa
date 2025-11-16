@@ -130,7 +130,7 @@ async def confirm_phone_verification(
     )
 
 # Admin endpoints
-@router.get("/", response_model=List[schemas.User])
+@router.get("", response_model=List[schemas.User])
 async def read_users(
     skip: int = 0,
     limit: int = 100,

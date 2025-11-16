@@ -6,7 +6,7 @@ from .. import crud, models, schemas
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.Ingredient])
+@router.get("", response_model=List[schemas.Ingredient])
 async def read_ingredients(
     skip: int = 0,
     limit: int = 100,
@@ -17,7 +17,7 @@ async def read_ingredients(
         skip=skip, limit=limit, active_only=active_only
     )
 
-@router.post("/", response_model=schemas.Ingredient)
+@router.post("", response_model=schemas.Ingredient)
 async def create_ingredient(
     *,
     ingredient_in: schemas.IngredientCreate,
