@@ -7,7 +7,7 @@ from ..websocket import manager
 
 router = APIRouter()
 
-@router.post("/", response_model=models.Order)
+@router.post("", response_model=models.Order)
 async def create_order(
     *,
     order_in: schemas.OrderCreate,
@@ -89,7 +89,7 @@ async def read_order(
     return order
 
 # Admin endpoints
-@router.get("/", response_model=List[models.Order])
+@router.get("", response_model=List[models.Order])
 async def read_orders(
     skip: int = 0,
     limit: int = 100,
