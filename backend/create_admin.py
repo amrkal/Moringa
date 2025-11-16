@@ -14,8 +14,8 @@ async def create_admin_user():
     await connect_to_mongo()
     
     # Admin credentials
-    admin_phone = "+254712345678"  # Default admin phone
-    admin_password = "admin123"     # Default admin password (change this!)
+    admin_phone = "0504707027"  # Admin phone
+    admin_password = "Admin123"     # Admin password
     admin_name = "Admin User"
     admin_email = "admin@moringa.com"
     
